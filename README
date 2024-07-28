@@ -1,0 +1,54 @@
+Solana Trading Bot
+
+Overview:
+This project is an attempt at creating a Solana trading bot for self-learning purposes. The primary goals are to:
+- Deepen understanding of blockchain development.
+- Improve Python programming skills.
+- Experiment with accessing and utilizing financial/blockchain data feeds.
+- Develop the capability to perform automated trading actions based on real-time and historical market data.
+
+The bot is designed to be flexible, allowing for the implementation of different trading strategies and the ability to backtest these strategies using historical market data.
+
+Features:
+- Real-time Market Data: Connect to WebSocket data feeds to receive real-time market updates.
+- Automated Trading: Execute trades based on predefined strategies.
+- Flexible Strategy Implementation: Easily implement and switch between different trading strategies.
+- Backtesting: Test strategies against historical market data to evaluate their performance.
+- Secure Transactions: Handle private keys securely to ensure safe trading.
+
+Rough Project Structure:
+solana-trading-bot/
+│
+├── config/
+│   └── config.json       # Configuration file
+│
+├── src/
+│   ├── __init__.py       # Makes the src directory a package
+│   ├── bot.py            # Main bot logic
+│   ├── utils.py          # Utility functions
+│   ├── websocket_client.py # WebSocket client
+│   └── strategy.py       # Strategy implementation
+│
+├── venv/                 # Virtual environment directory
+│
+├── .gitignore            # Git ignore file
+│
+└── requirements.txt      # List of dependencies
+
+Utility Functions:
+- Utility functions for common tasks are implemented in `src/utils.py`.
+
+WebSocket Client:
+- The WebSocket client in `src/websocket_client.py` handles real-time data feeds.
+
+Strategy Implementation:
+- The `src/strategy.py` file contains the implementation of trading strategies. Define multiple strategies and switch between them as needed.
+
+Backtesting:
+- Implement backtesting functionality in `src/backtesting.py` to evaluate strategies using historical market data.
+
+Future Improvements:
+- Enhanced Security: Implement advanced security measures for key management.
+- Advanced Strategies: Develop and test more sophisticated trading strategies.
+- Comprehensive Backtesting: Integrate a robust backtesting framework to improve strategy evaluation.
+- User Interface: Develop a simple user interface to control and monitor the bot.
