@@ -12,7 +12,7 @@ class BinanceLargeTradeStream:
     """
     Aggregates trades for a given asset over a specified time interval.
     
-    Continously receives aggregated trade data from Binance's WebSocket and
+    Continously receives aggregated trade data from Binance’s WebSocket and
     groups trades into buckets (e.g., every 5 seconds) to provide an overview
     of the aggregated BUY/SELL volume.
     """
@@ -123,8 +123,8 @@ class BinanceLargeTradeStream:
                               f"{self.symbol.upper():<4} "
                               f"{ttype:<5} "
                               f"{qty:>4.0f} "
-                              f"@$" f"{avg_price:>12,.2f} "
-                              f"({vol:>10,.0f}) "
+                              f"@${avg_price:>12,.2f} "
+                              f"(${vol:>10,.0f}) "
                               f"({count} trades)")
                     
                     cprint(output, "white", "on_" + color, attrs=attrs)
@@ -222,9 +222,9 @@ class BinanceLargeStreamManager:
         print(f"Using aggregation interval: {aggregation_interval} seconds")
 
         # Set aggregated volume thresholds (in USD)
-        baseline_threshold = 200_000  # minimum volume to display summary
-        bold_threshold = 500_000      # added bold formatting if exceeded
-        color_threshold = 1_000_000     # alternate color if exceeded
+        baseline_threshold = 100_000  # minimum volume to display summary
+        bold_threshold = 300_000      # added bold formatting if exceeded
+        color_threshold = 500_000     # alternate color if exceeded
 
         # Create aggregator streams for each selected asset
         streams = [
@@ -251,4 +251,4 @@ if __name__ == '__main__':
     try:
         asyncio.run(manager.run())
     except KeyboardInterrupt:
-        print("Interrupted by user. Goodbye.") 
+        print("Interrupted by user. Goodbye.")
