@@ -4,13 +4,14 @@ import json
 from websockets import connect
 from datetime import datetime
 import pytz
+import os
 
 class BaseBinanceStream(ABC):
-    def __init__(self, symbol, trades_file, websocket_url):
+    def __init__(self, symbol, trades_file, websocket_url, channel='@aggTrade'):
         self.symbol = symbol
         self.trades_file = trades_file
         self.websocket_url = websocket_url
-        self.uri = f'{websocket_url}/ws/{symbol}@aggTrade'
+        self.uri = f'{websocket_url}/ws/{symbol}{channel}'
 
     def get_display_symbol(self):
         """
@@ -52,6 +53,26 @@ class BaseBinanceStream(ABC):
             print("Error parsing message:", e)
             return None
 
+    def parse_mark_price_message(self, msg):
+        """
+        Parses a JSON string from Binance's mark price WebSocket and returns a dictionary
+        with the relevant mark price and funding rate fields.
+        """
+        try:
+            if isinstance(msg, dict):
+                data = msg
+            else:
+                data = json.loads(msg)
+            return {
+                'event_time': int(data['E']),
+                'symbol': data['s'],
+                'mark_price': float(data['p']),
+                'funding_rate': float(data['r'])
+            }
+        except Exception as e:
+            print("Error parsing mark price message:", e)
+            return None
+
     async def run(self):
         async with connect(self.uri) as ws:
             await self.handle_connection(ws)
@@ -59,4 +80,10 @@ class BaseBinanceStream(ABC):
     @abstractmethod
     async def handle_connection(self, ws):
         """Override this in subclasses to process incoming trades."""
-        pass 
+        pass
+
+    def get_output_file_path(self):
+        # Define the output folder relative to the project root (adjust if needed)
+        output_dir = os.path.join(os.getcwd(), 'binance', 'output files')
+        os.makedirs(output_dir, exist_ok=True)
+        return os.path.join(output_dir, self.trades_file) 
