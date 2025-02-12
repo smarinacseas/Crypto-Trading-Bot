@@ -1,6 +1,7 @@
 import asyncio
 from binance.standard_stream import StandardBinanceStream
 from binance.aggregated_stream import AggregatedBinanceStream
+from binance.funding_rates_stream import FundingRatesStream
 import aiohttp
 
 async def get_top_volume_assets(limit=10):
@@ -35,7 +36,11 @@ async def get_user_selected_assets():
 
 async def main():
     # Let the user select which type of stream they'd like to see:
-    stream_type = input("Select stream type: (1) Standard (2) Aggregated: ")
+    print("Select stream type:")
+    print("  (1) Standard")
+    print("  (2) Aggregated")
+    print("  (3) Funding Rates")
+    stream_type = input("Enter your choice: ")
 
     selected_assets = await get_user_selected_assets()
     if stream_type.strip() == "1":
@@ -47,10 +52,10 @@ async def main():
             StandardBinanceStream(symbol, trades_file, min_display, bold_amt, color_amt, "wss://stream.binance.com:9443")
             for symbol in selected_assets
         ]
-    else:
+    elif stream_type.strip() == "2":
         trades_file = "binance_trades_large.csv"
         aggregation_interval = float(input("Enter aggregation interval in seconds (default 5): ") or "5")
-        # Hardcoding thresholds here—you can also prompt for these
+        # Hardcoded thresholds - can prompt
         baseline_threshold = 100000
         bold_threshold = 300000
         color_threshold = 500000
@@ -58,6 +63,15 @@ async def main():
             AggregatedBinanceStream(symbol, trades_file, aggregation_interval, baseline_threshold, bold_threshold, color_threshold, "wss://stream.binance.com:9443")
             for symbol in selected_assets
         ]
+    elif stream_type.strip() == "3":
+        trades_file = "binance_funding_rates.csv"
+        streams = [
+            FundingRatesStream(symbol, trades_file, "wss://fstream.binance.com")
+            for symbol in selected_assets
+        ]
+    else:
+        print("Invalid option. Exiting.")
+        return
 
     tasks = [asyncio.create_task(stream.run()) for stream in streams]
 
@@ -65,7 +79,7 @@ async def main():
     exit_task = asyncio.create_task(asyncio.to_thread(input, "Press ENTER to quit...\n"))
     await exit_task
 
-    print("Terminating trade streams...")
+    print("Terminating stream(s)...")
     for t in tasks:
         t.cancel()
     await asyncio.gather(*tasks, return_exceptions=True)
