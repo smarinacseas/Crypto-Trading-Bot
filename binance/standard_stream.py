@@ -3,11 +3,11 @@ import json
 import pytz
 from datetime import datetime
 from termcolor import cprint
-from .base_stream import BaseBinanceStream
+from binance.base_stream import BaseBinanceStream
 
 class StandardBinanceStream(BaseBinanceStream):
     def __init__(self, symbol, trades_file, min_display, bold_amt, color_amt, websocket_url):
-        super().__init__(symbol, trades_file, websocket_url)
+        super().__init__(symbol, trades_file, websocket_url, channel='@aggTrade')
         self.min_display = min_display
         self.bold_amt = bold_amt
         self.color_amt = color_amt
@@ -53,7 +53,8 @@ class StandardBinanceStream(BaseBinanceStream):
                               f"{total_str:>10}")
                     cprint(output, "white", "on_" + color, attrs=attrs)
 
-                    with open(self.trades_file, 'a') as f:
+                    output_path = self.get_output_file_path()
+                    with open(output_path, 'a') as f:
                         f.write(f'{readable_time}, {asset_symbol.upper()}, {agg_trade_id}, '
                                 f'{price}, {first_trade_id}, {trade_time}, {is_buyer_maker}\n')
             except Exception as e:
