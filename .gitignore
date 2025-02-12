@@ -1,0 +1,61 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+*.egg-info/
+dist/
+build/
+
+# Output files
+*.csv
+*.log
+*.out
+*.dat
+*.db
+*.sqlite
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Pytest cache
+.pytest_cache/
+
+# MyPy cache
+.mypy_cache/
+
+# VS Code settings
+.vscode/
+
+# MacOS files
+.DS_Store
+
+# Environment variables
+.env
+
+# Ignore compiled files
+*.pyc
+
+# Ignore any other temporary files
+*.tmp
+*.temp
+
+# Ignore the virtual environment directory
+venv/
+
+# Ignore the virtual environment directory in the project structure
+solana-trading-bot/venv/
+
+# Ignore any other temporary or output files
+*.bak
+*.swp
