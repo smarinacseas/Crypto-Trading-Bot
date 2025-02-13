@@ -1,7 +1,4 @@
 import asyncio
-import json
-import pytz
-from datetime import datetime
 from termcolor import cprint
 from backend.app.data_import.binance.base_stream import BaseBinanceStream
 
