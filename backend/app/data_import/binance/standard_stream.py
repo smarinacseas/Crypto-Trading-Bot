@@ -3,7 +3,7 @@ import json
 import pytz
 from datetime import datetime
 from termcolor import cprint
-from binance.base_stream import BaseBinanceStream
+from backend.app.data_import.binance.base_stream import BaseBinanceStream
 
 class StandardBinanceStream(BaseBinanceStream):
     def __init__(self, symbol, trades_file, min_display, bold_amt, color_amt, websocket_url):

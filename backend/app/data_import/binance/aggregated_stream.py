@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 import pytz
 from termcolor import cprint
-from binance.base_stream import BaseBinanceStream
+from backend.app.data_import.binance.base_stream import BaseBinanceStream
 
 class AggregatedBinanceStream(BaseBinanceStream):
     def __init__(self, symbol, trades_file, aggregation_interval, baseline_threshold, bold_threshold, color_threshold, websocket_url):
