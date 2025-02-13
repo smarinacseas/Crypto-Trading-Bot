@@ -33,7 +33,7 @@ class BaseBinanceStream(ABC):
 
     def parse_trade_message(self, msg):
         """
-        Parses a JSON string from the Binance WebSocket and returns a dictionary
+        Parses a JSON string from the Binance's Aggregated Trade WebSocket and returns a dictionary
         with common trade fields.
         """
         try:
@@ -54,7 +54,7 @@ class BaseBinanceStream(ABC):
 
     def parse_mark_price_message(self, msg):
         """
-        Parses a JSON string from Binance's mark price WebSocket and returns a dictionary
+        Parses a JSON string from Binance's Mark Price WebSocket (funding rates) and returns a dictionary
         with the relevant mark price and funding rate fields.
         """
         try:
@@ -70,6 +70,33 @@ class BaseBinanceStream(ABC):
             }
         except Exception as e:
             print("Error parsing mark price message:", e)
+            return None
+
+    def parse_liquidation_message(self, msg):
+        """
+        Parses a JSON string from Binance's Liquidation WebSocket and returns a dictionary
+        with the relevant liquidation fields.
+        """
+        try:
+            if isinstance(msg, dict):
+                data = msg
+            else:
+                data = json.loads(msg)
+            return {
+                'symbol': data['o']['s'],
+                'side': data['o']['S'],
+                'order_type': data['o']['o'],
+                'time_in_force': data['o']['f'],
+                'og_quantity': float(data['o']['q']),
+                'price': float(data['o']['p']),
+                'avg_price': float(data['o']['ap']),
+                'order_status': data['o']['X'],
+                'last_filled_quantity': float(data['o']['l']),
+                'filled_quantity': float(data['o']['z']),
+                'trade_time': int(data['o']['T'])
+            }
+        except Exception as e:
+            print("Error parsing liquidation message:", e)
             return None
 
     async def run(self):
