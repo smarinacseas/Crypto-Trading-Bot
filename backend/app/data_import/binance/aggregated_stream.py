@@ -26,13 +26,13 @@ class AggregatedBinanceStream(BaseBinanceStream):
                 data = self.parse_trade_message(msg)
                 if not data:
                     continue
-                price = data['price']
-                quantity = data['quantity']
-                is_buyer_maker = data['is_buyer_maker']
+                price = data.get('price', 0)
+                quantity = data.get('quantity', 0)
+                is_buyer_maker = data.get('is_buyer_maker', False)
                 trade_type = 'SELL' if is_buyer_maker else 'BUY'
                 volume = price * quantity
                 trade = {
-                    'time': data['event_time'],
+                    'time': data.get('event_time', 0),
                     'trade_type': trade_type,
                     'price': price,
                     'quantity': quantity,

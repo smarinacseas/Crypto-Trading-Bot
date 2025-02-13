@@ -19,14 +19,14 @@ class StandardBinanceStream(BaseBinanceStream):
                     continue
 
                 # Format the event time using the base class helper.
-                readable_time = self.format_time(data['event_time'])
-                asset_symbol = data['symbol']
-                agg_trade_id = data['agg_trade_id']
-                price = data['price']
-                quantity = data['quantity']
-                first_trade_id = data['first_trade_id']
-                trade_time = data['trade_time']
-                is_buyer_maker = data['is_buyer_maker']
+                readable_time = self.format_time(data.get('event_time', 0))
+                asset_symbol = data.get('symbol', 'N/A')
+                agg_trade_id = data.get('agg_trade_id', 0)
+                price = data.get('price', 0)
+                quantity = data.get('quantity', 0)
+                first_trade_id = data.get('first_trade_id', 0)
+                trade_time = data.get('trade_time', 'N/A')
+                is_buyer_maker = data.get('is_buyer_maker', False)
 
                 usd_size = price * quantity
                 display_symbol = self.get_display_symbol()

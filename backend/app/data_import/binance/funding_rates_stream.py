@@ -34,10 +34,10 @@ class FundingRatesStream(BaseBinanceStream):
         while True:
             try:
                 data = await self.rate_queue.get()
-                event_time = self.format_time(data['event_time'])
-                display_symbol = data['symbol'].replace('USDT', '')
-                mark_price = data['mark_price']
-                funding_rate = data['funding_rate']
+                event_time = self.format_time(data.get('event_time', 0))
+                display_symbol = data.get('symbol', 'N/A').replace('USDT', '')
+                mark_price = data.get('mark_price', 0)
+                funding_rate = data.get('funding_rate', 0)
                 annualized_rate = funding_rate * 3 * 365 * 100  # Funding rate every 8 hours
 
                 if annualized_rate > 50:
