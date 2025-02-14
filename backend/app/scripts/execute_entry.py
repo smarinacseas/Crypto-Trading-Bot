@@ -1,5 +1,9 @@
 import os
-from backend.app.trade_execution.execute import TradeExecutor
+from backend.app.trade_execution.execute import Executor
+
+# Run the script with the following commands:
+# cd /Users/stefanmarinac/VSCode_Projects/Solana-Trading-Bot
+# python -m backend.app.scripts.execute_entry
 
 def main():
     # Define a list of potential exchanges you support
@@ -30,19 +34,21 @@ def main():
         print("Invalid input. Exiting.")
         return
 
-    # Initialize the TradeExecutor with the selected exchange
-    executor = TradeExecutor(selected_exchange)
+    # Initialize the Executor with the selected exchange
+    executor = Executor(selected_exchange)
 
     while True:
         print("\nSelect an action:")
         print("1. Fetch Balance")
         print("2. Create Order")
-        print("3. Fetch Open Orders")
-        print("4. Cancel All Orders")
-        print("5. Execute Trade Cycle")
-        print("6. Exit")
+        print("3. Create Perpetual Futures Order With Leverage")
+        print("4. Fetch Open Orders")
+        print("5. Cancel All Orders")
+        print("6. Execute Trade Cycle")
+        print("7. Exit")
         
-        user_choice = input("Enter your choice (1-6): ").strip()
+        
+        user_choice = input("Enter your choice (1-7): ").strip()
         
         if user_choice == '1':
             executor.fetch_balance()
@@ -55,15 +61,25 @@ def main():
             executor.create_order(symbol, order_type, side, amount, price if price > 0 else None)
         elif user_choice == '3':
             symbol = input("Enter symbol (e.g., SOL/USDT): ").strip()
-            executor.fetch_open_orders(symbol)
+            order_type = input("Enter order type for perpetual futures (limit/market/stop, etc.): ").strip()
+            side = input("Enter side (buy/sell): ").strip()
+            amount = float(input("Enter amount: ").strip())
+            price = float(input("Enter price (or 0 for market order): ").strip())
+            lev_input = input("Enter leverage (or leave blank for default): ").strip()
+            leverage = float(lev_input) if lev_input else None
+            executor.create_perpetual_futures_order(symbol, order_type, side, amount, price if price > 0 else None, leverage=leverage)
         elif user_choice == '4':
             symbol = input("Enter symbol (e.g., SOL/USDT): ").strip()
-            executor.cancel_all_orders(symbol)
+            executor.fetch_open_orders(symbol.upper())
         elif user_choice == '5':
-            executor.execute_trade_cycle()
+            symbol = input("Enter symbol (e.g., SOL/USDT): ").strip()
+            executor.cancel_all_orders(symbol.upper())
         elif user_choice == '6':
+            executor.execute_trade_cycle()
+        elif user_choice == '7':
             print("Exiting...")
             break
+        
         else:
             print("Invalid choice. Please try again.")
 
