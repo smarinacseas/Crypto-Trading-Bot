@@ -134,6 +134,69 @@ class Executor:
             print(error_message)
             return error_message
 
+    def set_leverage(self, leverage, symbol, params=None):
+        """
+        Set the leverage for the given symbol.
+        
+        leverage: int or float - desired leverage
+        symbol: str - trading pair symbol
+        params: dict or None - additional parameters
+        
+        Returns a formatted message indicating success or failure.
+        """
+        try:
+            if params is None:
+                params = {}
+            if hasattr(self.exchange, 'set_leverage'):
+                result = self.exchange.set_leverage(leverage, symbol, params)
+                message = f"Leverage set to {leverage} for {symbol}. Result: {result}"
+            else:
+                message = f"set_leverage method not supported by {self.exchange_name}."
+            print(message)
+            return message
+        except Exception as e:
+            error_message = f"Error setting leverage for {symbol}: {e}"
+            print(error_message)
+            return error_message
+
+    def create_perpetual_futures_order(self, symbol, order_type, side, amount, price=None, params=None, leverage=None):
+        """
+        Create a perpetual futures order for the specified symbol.
+        
+        order_type: str - Type of order ('limit', 'market', 'stop', etc.)
+        side: str - 'buy' or 'sell'
+        amount: float - Order amount
+        price: float or None - Order price (if omitted for market orders)
+        params: dict or None - Additional parameters for the order; defaults to {'contractType': 'perpetual'}
+        leverage: int or float or None - Optional leverage setting
+        
+        Returns a formatted string with the order details.
+        """
+        try:
+            if leverage is not None:
+                self.set_leverage(leverage, symbol, params)
+            if params is None:
+                params = {'contractType': 'perpetual'}
+            else:
+                params.setdefault('contractType', 'perpetual')
+            order = self.exchange.create_order(
+                symbol=symbol,
+                type=order_type,
+                side=side,
+                amount=amount,
+                price=price,
+                params=params
+            )
+            order_id = order.get('id', 'N/A')
+            message = (f"Perpetual Futures Order Created: ID {order_id} for {symbol} at {price} "
+                       f"(Type: {order_type}, Side: {side}, Leverage: {leverage if leverage is not None else 'Default'})")
+            print(message)
+            return message
+        except Exception as e:
+            error_message = f"Error creating perpetual futures order for {symbol}: {e}"
+            print(error_message)
+            return error_message
+
     def execute_trade_cycle(self, symbol='SOL/USDT', order_type='limit', side='sell', amount=0.01, price=5000, params=None):
         """
         Execute a full cycle of trade operations for the given symbol.
