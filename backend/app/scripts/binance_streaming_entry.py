@@ -6,6 +6,9 @@ from backend.app.data_import.binance.funding_rates_stream import FundingRatesStr
 from backend.app.data_import.binance.liquidations_stream import LiquidationsStream
 import aiohttp
 
+# Run the script with the following commands:
+# cd /Users/stefanmarinac/VSCode_Projects/Solana-Trading-Bot
+# python -m backend.app.scripts.binance_streaming_entry
 
 # Compute the project root directory. This file is three levels deep: backend/app/scripts/
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
