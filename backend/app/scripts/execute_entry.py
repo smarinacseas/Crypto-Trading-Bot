@@ -1,5 +1,8 @@
 import os
 from backend.app.execution.execute_ccxt import Executor
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Run the script with the following commands:
 # cd /Users/stefanmarinac/VSCode_Projects/Solana-Trading-Bot
@@ -9,14 +12,15 @@ def main():
     # Define a list of potential exchanges you support
     potential_exchanges = ["MEXC", "BINANCE", "COINBASE", "KRAKEN", "HYPERLIQUID"]
     available_exchanges = []
-
     
     for exchange in potential_exchanges:
+        # Add HyperLiquid
+        if exchange == "HYPERLIQUID" and os.getenv("HYPERLIQUID_SECRET_KEY"):
+            available_exchanges.append("HYPERLIQUID")
+        # Add other exchanges
         if os.getenv(f"{exchange}_API_KEY") and os.getenv(f"{exchange}_SECRET_KEY"):
             available_exchanges.append(exchange)
-        # Add HyperLiquid
-        if os.getenv("HYPERLIQUID_SECRET_KEY"):
-            available_exchanges.append("HYPERLIQUID")
+        
 
     if not available_exchanges:
         print("No available exchange APIs found in environment variables.")
