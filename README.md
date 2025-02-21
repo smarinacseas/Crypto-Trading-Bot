@@ -33,6 +33,18 @@ The bot is modular and scalable, allowing for future enhancements such as **AI-d
 git clone https://github.com/yourusername/solana-trading-bot.git
 ```
 
+- Create a virtual environment
+
+```
+conda create -n <env_name>
+```
+
+- Activate the environment
+
+```
+conda activate <env_name>
+```
+
 - Install the dependencies
 
 ```
