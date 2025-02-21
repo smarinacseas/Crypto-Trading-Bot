@@ -282,76 +282,52 @@ class HyperLiquidExecutor:
     def kill_switch(self):
         """
         Kill switch to cancel all open orders and close all positions.
-
-        This method performs the following actions:
-          1. Retrieves the current user state to determine which assets have open positions.
-          2. Iterates over each asset in the user state:
-               - Cancels all open orders for the asset.
-               - Determines if a position exists based on the 'szi' field.
-               - If a position exists, sends a market order in the opposite direction
-                 to close the position (i.e., sell if long, buy if short).
-                  
-        Returns:
-            str: A summary message that details the actions taken (orders cancelled and positions closed).
+        Re-checks positions after executing market orders until all are closed.
         """
         try:
-            # Retrieve the current user state
-            user_state = self.exchange.info.user_state(self.address)
-            asset_positions = user_state.get("assetPositions", [])
-            position_closures = {}
-
-            for ap in asset_positions:
-                position = ap.get("position", {})
-                coin = position.get("coin")
-                if not coin:
-                    continue  # Skip if asset name is missing.
+            all_closed = False
+            while not all_closed:
+                user_state = self.exchange.info.user_state(self.address)
+                asset_positions = user_state.get("assetPositions", [])
+                all_closed = True
+                position_closures = {}
                 
-                # Cancel open orders for this asset.
-                cancel_response = self.cancel_all_orders(coin)
-                logging.info(f"Cancelled open orders for {coin}: {cancel_response}")
+                for ap in asset_positions:
+                    position = ap.get("position", {})
+                    coin = position.get("coin")
+                    if not coin:
+                        continue
+                    # Cancel any open orders first.
+                    cancel_response = self.cancel_all_orders(coin)
+                    logging.info(f"Cancelled orders for {coin}: {cancel_response}")
 
-                # Get the position size from the user state.
-                szi_str = position.get("szi", "0")
-                try:
-                    position_size = float(szi_str)
-                except Exception as e:
-                    logging.error(f"Error converting position size for {coin}: {e}")
-                    position_size = 0.0
+                    # Get the position size.
+                    szi_str = position.get("szi", "0")
+                    try:
+                        position_size = float(szi_str)
+                    except Exception as e:
+                        logging.error(f"Error converting position size for {coin}: {e}")
+                        position_size = 0.0
 
-                # If there is no open position, move to the next asset.
-                if position_size == 0:
-                    position_closures[coin] = "No open position."
-                    continue
-
-                # Determine the side for the closing order.
-                # For long positions (size > 0), we close by selling.
-                # For short positions (size < 0), we close by buying.
-                if position_size > 0:
-                    closing_side = "sell"
-                else:
-                    closing_side = "buy"
-
-                # Issue a market order to close the position.
-                # Here we assume that self.exchange.trade.create_order exists.
-                order_amount = abs(position_size)
-                try:
-                    order_response = self.exchange.trade.create_order(
-                        self.address,
-                        coin,
-                        order_type="market",
-                        side=closing_side,
-                        amount=order_amount
-                    )
-                    position_closures[coin] = f"Closed position of {order_amount} via {closing_side} market order."
-                    logging.info(f"{coin}: {position_closures[coin]}")
-                except Exception as order_exception:
-                    error_msg = f"Failed to close position for {coin}: {order_exception}"
-                    position_closures[coin] = error_msg
-                    logging.error(error_msg)
-
-            message = f"Kill switch executed. Actions: {position_closures}"
-            logging.info(message)
-            return message
+                    if position_size != 0:
+                        all_closed = False  # At least one open position remains.
+                        closing_side = "sell" if position_size > 0 else "buy"
+                        order_amount = abs(position_size)
+                        try:
+                            order_response = self.exchange.trade.create_order(
+                                self.address, coin, order_type="market", side=closing_side, amount=order_amount)
+                            position_closures[coin] = f"Closed {order_amount} via {closing_side} market order."
+                            logging.info(f"{coin}: {position_closures[coin]}")
+                        except Exception as order_exception:
+                            error_msg = f"Failed to close position for {coin}: {order_exception}"
+                            position_closures[coin] = error_msg
+                            logging.error(error_msg)
+                logging.info(f"Kill switch iteration result: {position_closures}")
+                if not all_closed:
+                    time.sleep(5)  # Wait briefly before re-checking positions.
+            final_message = "Kill switch executed. All positions have been closed."
+            logging.info(final_message)
+            return final_message
 
         except Exception as e:
             error_message = f"Error executing kill switch: {e}"
