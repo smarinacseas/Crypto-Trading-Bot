@@ -59,7 +59,7 @@ uvicorn backend.app.main:app --reload
 
 Navigate to http://127.0.0.1:8000/docs to interact with the endpoints
 
-### ✅ **Planned Features**
+### ⏳ **Planned Features**
 
 - More robust exchange support (Bybit, KuCoin, Kraken, etc.)
 - Trading signals & indicators (SMA, RSI, VWAP, VWMA, TA-Lib integration)
