@@ -90,4 +90,22 @@ def trade_cycle(exchange: str, symbol: str = 'SOL/USDT', order_type: str = 'limi
         result = executor.execute_trade_cycle(symbol, order_type, side, amount, price)
         return {"result": result}
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/kill-switch")
+def kill_switch(exchange: str, symbol: str = None):
+    """Activate the kill switch to cancel all orders and, if applicable, close positions.
+    For HyperLiquid, the symbol parameter is ignored.
+    For ccxt-based exchanges, an optional symbol can be provided to target a specific asset."""
+    try:
+        executor = get_executor(exchange)
+        if exchange.upper() == "HYPERLIQUID":
+            # For HyperLiquidExecutor, kill_switch does not accept a symbol argument
+            result = executor.kill_switch()
+        else:
+            # For ccxt Executor, pass the symbol if provided
+            result = executor.kill_switch(symbol)
+        return {"result": result}
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) 
