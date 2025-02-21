@@ -2,10 +2,13 @@ import ccxt
 import os
 import schedule  # Optional for scheduled execution
 import time
+import logging
 
 # This skeleton demonstrates some important trading actions via the CCXT library using the MEXC exchange as an example.
 # For more details, see the CCXT Private API documentation:
 # https://docs.ccxt.com/#/README?id=private-api
+
+# Example symbol (MEXC): SOLUSDT
 
 
 class Executor:
@@ -89,7 +92,7 @@ class Executor:
                 params=params
             )
             order_id = order.get('id', 'N/A')
-            message = f"Order Created: ID {order_id} for {symbol} at {price} (Type: {order_type}, Side: {side})"
+            message = f"Order Created: {order_id} for {amount} {symbol} at {price} ({order_type} {side})"
             print(message)
             return message
         except Exception as e:
@@ -99,24 +102,29 @@ class Executor:
 
     def fetch_open_orders(self, symbol):
         """
-        Retrieve the list of open orders for the given symbol.
-        Returns a formatted string with order details.
+        Retrieve open orders for the user and format them into a readable string.
         """
         try:
-            orders = self.exchange.fetch_open_orders(symbol)
+            orders = self.exchange.info.open_orders(self.address)
             if orders:
+                # Format each order into a readable string
                 output = "\n".join(
-                    f"ID {order.get('id', 'N/A')}: {order.get('type')} {order.get('side')} order for {order.get('symbol')} at {order.get('price')}"
-                    for order in orders
+                    f"Order ID: {order.get('oid', 'N/A')}, "
+                    f"Coin: {order.get('coin', 'N/A')}, "
+                    f"Side: {'Buy' if order.get('side') == 'A' else 'Sell'}, "
+                    f"Size: {order.get('sz', 'N/A')}, "
+                    f"Limit Price: {order.get('limitPx', 'N/A')}, "
+                    f"Timestamp: {order.get('timestamp', 'N/A')}"
+                    for order in orders if order.get('coin') == symbol
                 )
                 message = f"Open Orders for {symbol}:\n{output}"
             else:
                 message = f"No open orders for {symbol}."
-            print(message)
+            logging.info(message)
             return message
         except Exception as e:
-            error_message = f"Error fetching open orders for {symbol}: {e}"
-            print(error_message)
+            error_message = f"Error fetching open orders: {e}"
+            logging.error(error_message)
             return error_message
 
     def cancel_all_orders(self, symbol):
@@ -125,8 +133,22 @@ class Executor:
         Returns a formatted confirmation message.
         """
         try:
-            result = self.exchange.cancel_all_orders(symbol)
-            message = f"Canceled all orders for {symbol}. Result: {result}"
+            cancelled_orders = self.exchange.cancel_all_orders(symbol)
+            if cancelled_orders:
+                # Build a human-readable summary for each cancelled order.
+                order_details = []
+                for order in cancelled_orders:
+                    order_info = (
+                        f"ID: {order.get('id', 'N/A')}, "
+                        f"Symbol: {order.get('symbol', 'N/A')}, "
+                        f"Amount: {order.get('amount', 'N/A')}, "
+                        f"Price: {order.get('price', 'N/A')}, "
+                        f"{order.get('type', 'N/A')} {order.get('side', 'N/A')}"
+                    )
+                    order_details.append(order_info)
+                message = f"Cancelled orders for {symbol}:\n" + "\n".join(order_details)
+            else:
+                message = f"No open orders to cancel for {symbol}."
             print(message)
             return message
         except Exception as e:
@@ -221,6 +243,93 @@ class Executor:
         final_summary = "\n".join(summary)
         print(final_summary)
         return final_summary
+
+    def kill_switch(self, symbol=None):
+        """
+        Kill switch to cancel all open orders and close all positions.
+        
+        If 'symbol' is provided, this method will operate on that symbol only.
+        Otherwise, it attempts to fetch positions (if supported) and applies the kill 
+        switch for each position with a nonzero size.
+        
+        The process involves:
+          1. Canceling all open orders for the symbol.
+          2. Fetching positions (if the exchange supports fetch_positions).
+          3. For each position with a nonzero size:
+               - Determining the closing side (sell for long positions, buy for short positions).
+               - Issuing a market order to close the position using the full position size.
+        
+        Returns:
+            A dictionary summarizing the actions taken for each symbol, or an error message.
+        """
+        result = {}
+        try:
+            if symbol:
+                # Cancel orders for the given symbol and try closing its position.
+                cancel_result = self.cancel_all_orders(symbol)
+                result[symbol] = {"cancel": cancel_result}
+                if hasattr(self.exchange, 'fetch_positions'):
+                    positions = self.exchange.fetch_positions()
+                    # Find the position for the given symbol.
+                    for pos in positions:
+                        if pos.get("symbol") == symbol:
+                            # Use 'contracts' or 'positionAmt' depending on exchange implementation.
+                            if "contracts" in pos:
+                                position_amount = float(pos.get("contracts", 0))
+                            elif "positionAmt" in pos:
+                                position_amount = float(pos.get("positionAmt", 0))
+                            else:
+                                position_amount = 0.0
+                            
+                            if position_amount != 0:
+                                closing_side = "sell" if position_amount > 0 else "buy"
+                                order_amount = abs(position_amount)
+                                create_order_response = self.create_order(
+                                    symbol, 
+                                    order_type="market", 
+                                    side=closing_side, 
+                                    amount=order_amount
+                                )
+                                result[symbol]["close_position"] = create_order_response
+                            else:
+                                result[symbol]["close_position"] = "No open position for symbol."
+                else:
+                    result[symbol]["close_position"] = "Exchange does not support fetch_positions."
+            else:
+                # No symbol provided - attempt to kill positions for all symbols.
+                if hasattr(self.exchange, 'fetch_positions'):
+                    positions = self.exchange.fetch_positions()
+                    for pos in positions:
+                        s = pos.get("symbol")
+                        # Use 'contracts' or 'positionAmt' depending on the exchange.
+                        if "contracts" in pos:
+                            position_amount = float(pos.get("contracts", 0))
+                        elif "positionAmt" in pos:
+                            position_amount = float(pos.get("positionAmt", 0))
+                        else:
+                            position_amount = 0.0
+
+                        if position_amount != 0:
+                            cancel_result = self.cancel_all_orders(s)
+                            closing_side = "sell" if position_amount > 0 else "buy"
+                            order_amount = abs(position_amount)
+                            create_order_response = self.create_order(
+                                s, 
+                                order_type="market", 
+                                side=closing_side, 
+                                amount=order_amount
+                            )
+                            result[s] = {"cancel": cancel_result, "close_position": create_order_response}
+                        else:
+                            result[s] = {"cancel": "No open orders", "close_position": "No open position."}
+                else:
+                    result["error"] = "Exchange does not support fetch_positions."
+            logging.info(f"Kill switch result: {result}")
+            return result
+        except Exception as e:
+            error_msg = f"Error executing kill switch: {e}"
+            logging.error(error_msg)
+            return error_msg
 
 
 if __name__ == '__main__':
