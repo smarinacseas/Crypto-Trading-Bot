@@ -10,7 +10,6 @@ import logging
 
 # Example symbol (MEXC): SOLUSDT
 
-
 class Executor:
     def __init__(self, exchange_name):
         """Initialize the Executor with the given exchange name and its API credentials.
@@ -244,109 +243,189 @@ class Executor:
         print(final_summary)
         return final_summary
 
-    def kill_switch(self, symbol=None):
+    def open_positions(self, symbol):
         """
-        Kill switch to cancel all open orders and close all positions. Iterates until all positions are closed.
+        Retrieve open position details for the given symbol using the exchange's fetch_positions method.
 
-        If 'symbol' is provided, the method operates on that symbol only.
-        Otherwise, it attempts to fetch positions (if supported) and applies the kill switch for
-        each position with a nonzero size.
-
-        The process involves:
-          1. Canceling all open orders for the symbol.
-          2. Fetching positions (if the exchange supports fetch_positions).
-          3. For each position with a nonzero amount:
-               - Determining the closing side (sell for long positions, buy for short positions).
-               - Issuing a market order to close the position using the full position size.
-          4. Waiting briefly and re-checking until no open positions remain.
-        
-        Returns:
-            A string confirmation message if all positions have been closed,
-            or an error message if something fails.
+        Returns a tuple: 
+          (positions, openpos_bool, position_size, is_long, index)
+        where:
+          - positions: the full list of fetched positions (filtered by symbol)
+          - openpos_bool (bool): True if an open position exists for symbol.
+          - position_size (float): absolute size of the position.
+          - is_long (bool or None): True if the position is long, False if short.
+          - index (int): the index of the position in the positions list (0 if only one exists).
         """
-        result = {}
         try:
-            while True:
-                all_closed = True
-
-                if symbol:
-                    # Process for a specific symbol.
-                    cancel_result = self.cancel_all_orders(symbol)
-                    result[symbol] = {"cancel": cancel_result}
-                    if hasattr(self.exchange, 'fetch_positions'):
-                        positions = self.exchange.fetch_positions()
-                        position_found = False
-                        for pos in positions:
-                            if pos.get("symbol") == symbol:
-                                position_found = True
-                                # Determine the position amount using 'contracts' or 'positionAmt'.
-                                if "contracts" in pos:
-                                    position_amount = float(pos.get("contracts", 0))
-                                elif "positionAmt" in pos:
-                                    position_amount = float(pos.get("positionAmt", 0))
-                                else:
-                                    position_amount = 0.0
-
-                                if position_amount != 0:
-                                    all_closed = False
-                                    closing_side = "sell" if position_amount > 0 else "buy"
-                                    order_amount = abs(position_amount)
-                                    create_order_response = self.create_order(
-                                        symbol, 
-                                        order_type="market", 
-                                        side=closing_side, 
-                                        amount=order_amount
-                                    )
-                                    result[symbol]["close_position"] = create_order_response
-                        if not position_found:
-                            result[symbol]["close_position"] = "No open position for symbol."
-                    else:
-                        result[symbol]["close_position"] = "Exchange does not support fetch_positions."
+            # Depending on your exchange, you may supply parameters such as type and code.
+            params = {'type': 'swap', 'code': 'USD'}
+            positions = self.exchange.fetch_positions([symbol], params)
+            if positions and len(positions) > 0:
+                # We assume there is one position per symbol. (Adjust if multiple positions are possible.)
+                position = positions[0]
+                pos_size = 0.0
+                if "contracts" in position:
+                    pos_size = float(position.get("contracts", 0))
+                elif "positionAmt" in position:
+                    pos_size = float(position.get("positionAmt", 0))
                 else:
-                    # Process for all symbols.
-                    if hasattr(self.exchange, 'fetch_positions'):
-                        positions = self.exchange.fetch_positions()
-                        for pos in positions:
-                            s = pos.get("symbol")
-                            if "contracts" in pos:
-                                position_amount = float(pos.get("contracts", 0))
-                            elif "positionAmt" in pos:
-                                position_amount = float(pos.get("positionAmt", 0))
-                            else:
-                                position_amount = 0.0
-
-                            if position_amount != 0:
-                                all_closed = False
-                                cancel_result = self.cancel_all_orders(s)
-                                closing_side = "sell" if position_amount > 0 else "buy"
-                                order_amount = abs(position_amount)
-                                create_order_response = self.create_order(
-                                    s, 
-                                    order_type="market", 
-                                    side=closing_side, 
-                                    amount=order_amount
-                                )
-                                result[s] = {"cancel": cancel_result, "close_position": create_order_response}
-                            else:
-                                result[s] = {"cancel": "No open orders", "close_position": "No open position."}
-                    else:
-                        result["error"] = "Exchange does not support fetch_positions."
-                        logging.info(result["error"])
-                        return result["error"]
-
-                logging.info(f"Kill switch iteration result: {result}")
-                if all_closed:
-                    break
+                    pos_size = 0.0
+                openpos_bool = pos_size != 0
+                side_field = position.get("side", "").lower()
+                if side_field in ['buy', 'long']:
+                    is_long = True
+                elif side_field in ['sell', 'short']:
+                    is_long = False
                 else:
-                    time.sleep(5)  # Brief delay before rechecking positions.
-            
-            final_message = "Kill switch executed. All positions have been closed."
-            logging.info(final_message)
-            return final_message
-
+                    is_long = None
+                return (positions, openpos_bool, abs(pos_size), is_long, 0)
+            else:
+                return ([], False, 0, None, None)
         except Exception as e:
-            error_msg = f"Error executing kill switch: {e}"
-            logging.error(error_msg)
+            logging.error(f"Error fetching open positions for {symbol}: {e}")
+            return (None, False, 0, None, None)
+
+    def kill_switch(self, symbol):
+        """
+        Kill switch to cancel all open orders and close the open position for the given symbol.
+        
+        This updated method handles both futures and spot positions.
+        For futures positions, it uses fetch_positions.
+        For spot positions, it checks the base asset balance from fetch_balance.
+        
+        Returns a confirmation message on success or an error message.
+        """
+        try:
+            print(f"Starting the kill switch for {symbol}")
+            # Attempt to get futures positions first.
+            positions, openpos, kill_size, is_long, _ = self.open_positions(symbol)
+            is_futures = False
+            if openpos and kill_size > 0:
+                is_futures = True
+            else:
+                # Check for spot position using balance.
+                try:
+                    market = self.exchange.market(symbol)
+                    if not isinstance(market, dict):
+                        raise ValueError(f"Market info for {symbol} is not a dictionary: {market}")
+                    base_currency = market['base']
+                except Exception as e:
+                    print(f"Error fetching market info for symbol {symbol}: {e}")
+                    base_currency = symbol.split('/')[0]
+                balance = self.exchange.fetch_balance()
+                if not isinstance(balance, dict):
+                    raise ValueError(f"Balance info is not a dictionary: {balance}")
+                spot_balance = balance.get('free', {}).get(base_currency, 0)
+                if spot_balance > 0:
+                    openpos = True
+                    kill_size = spot_balance
+                    is_long = True  # For spot positions, we assume a long (asset holding) position.
+                    is_futures = False
+                    print(f"Detected spot position for {symbol}: {base_currency} balance = {spot_balance}")
+                else:
+                    openpos = False
+
+            print(f"Initial position state: openpos={openpos}, kill_size={kill_size}, is_long={is_long}, is_futures={is_futures}")
+
+            while openpos:
+                print("Kill switch loop initiated...")
+                
+                # Cancel all open orders for the symbol.
+                cancel_response = self.cancel_all_orders(symbol)
+                print(f"Cancelled orders for {symbol}. Response: {cancel_response}")
+
+                # Refresh position state.
+                if is_futures:
+                    _, openpos, kill_size, is_long, _ = self.open_positions(symbol)
+                    kill_size = float(kill_size)
+                else:
+                    balance = self.exchange.fetch_balance()
+                    if not isinstance(balance, dict):
+                        raise ValueError(f"Balance info is not a dictionary: {balance}")
+                    try:
+                        market = self.exchange.market(symbol)
+                        if not isinstance(market, dict):
+                            raise ValueError(f"Market info for {symbol} is not a dictionary: {market}")
+                        base_currency = market['base']
+                    except Exception as e:
+                        print(f"Error fetching market info for symbol {symbol}: {e}")
+                        base_currency = symbol.split('/')[0]
+                    spot_balance = balance.get('free', {}).get(base_currency, 0)
+                    openpos = spot_balance > 0
+                    kill_size = spot_balance
+                    is_long = True  # Spot trading positions are assumed to be long.
+                
+                if not openpos:
+                    break
+
+                # Retrieve order book prices.
+                ask, bid = self.ask_bid(symbol)
+                if ask is None or bid is None:
+                    raise ValueError(f"Order book prices for {symbol} are not valid: ask={ask}, bid={bid}")
+                print(f"For {symbol}: ask={ask}, bid={bid}")
+
+                try:
+                    if is_futures:
+                        # For a long futures position, sell at the ask price.
+                        if is_long:
+                            order = self.exchange.create_order(
+                                symbol=symbol,
+                                type="limit",
+                                side="sell",
+                                amount=kill_size,
+                                price=ask,
+                                params={}
+                            )
+                            print(f"Placed LIMIT SELL order to close long futures position for {symbol}: {order}")
+                        else:
+                            # For a short futures position, buy at the bid price.
+                            order = self.exchange.create_order(
+                                symbol=symbol,
+                                type="limit",
+                                side="buy",
+                                amount=kill_size,
+                                price=bid,
+                                params={}
+                            )
+                            print(f"Placed LIMIT BUY order to close short futures position for {symbol}: {order}")
+                    else:
+                        # For spot positions, use our Executor.create_order method (which handles response parsing)
+                        result_message = self.create_order(symbol, "limit", "sell", kill_size, ask, params={})
+                        print(f"Placed LIMIT SELL spot order for {symbol}: {result_message}")
+
+                except Exception as e:
+                    print(f"Error placing order for {symbol}: {e}")
+                    break
+
+                print("Sleeping for 30 seconds to allow the order to fill...")
+                time.sleep(30)
+
+                # Update the position state after sleep.
+                if is_futures:
+                    _, openpos, kill_size, is_long, _ = self.open_positions(symbol)
+                    print(f"Updated futures position state: openpos={openpos}, kill_size={kill_size}, is_long={is_long}")
+                else:
+                    balance = self.exchange.fetch_balance()
+                    if not isinstance(balance, dict):
+                        raise ValueError(f"Balance info is not a dictionary: {balance}")
+                    try:
+                        market = self.exchange.market(symbol)
+                        if not isinstance(market, dict):
+                            raise ValueError(f"Market info for {symbol} is not a dictionary: {market}")
+                        base_currency = market['base']
+                    except Exception as e:
+                        print(f"Error fetching market info for symbol {symbol}: {e}")
+                        base_currency = symbol.split('/')[0]
+                    spot_balance = balance.get('free', {}).get(base_currency, 0)
+                    openpos = spot_balance > 0
+                    kill_size = spot_balance
+                    print(f"Updated spot position state: openpos={openpos}, kill_size={kill_size}")
+
+            print(f"Kill switch executed successfully. Position for {symbol} is closed.")
+            return f"Kill switch executed successfully. Position for {symbol} is closed."
+        except Exception as e:
+            error_msg = f"Error executing kill switch for {symbol}: {e}"
+            print(error_msg)
             return error_msg
 
     def ask_bid(self, symbol):
@@ -371,94 +450,58 @@ class Executor:
     def pnl_close(self, symbol, target, max_loss):
         """
         Evaluate the profit or loss (PnL) for the open position on the given symbol and 
-        trigger the kill switch if either the profit target or maximum loss threshold is reached.
-
-        This method uses the exchange's order book (via ask_bid) to obtain the current exit price.
-        - For a long position, we're selling at the bid price.
-        - For a short position, we're buying to close at the ask price.
-
+        trigger the kill switch if a profit target or maximum loss threshold is reached.
+        
+        For exit price determination:
+          - For a long position, use the bid (i.e. selling at bid).
+          - For a short position, use the ask (i.e. buying at ask).
+        
         Parameters:
-            symbol (str): Trading pair symbol (e.g., 'SOL/USDT').
-            target (float): Profit target percentage threshold (e.g., 5 for 5% profit).
-            max_loss (float): Maximum loss percentage threshold (e.g., -2 for -2% loss).
-
-        Returns:
-            tuple: (pnl_trigger, in_position, position_size, is_long)
-                - pnl_trigger (bool): True if the kill switch was triggered.
-                - in_position (bool): True if an open position was found.
-                - position_size (float): The absolute size of the open position.
-                - is_long (bool or None): True if the position is long, False if short, or None if undefined.
+          symbol (str): Trading pair symbol (e.g., 'SOL/USDT').
+          target (float): Profit target percentage threshold (e.g., 5 for 5% profit).
+          max_loss (float): Maximum loss percentage threshold (e.g., -2 for -2% loss).
+        
+        Returns a tuple: (pnl_trigger, in_position, position_size, is_long)
         """
         try:
-            # Ensure that the exchange supports fetch_positions.
-            if not hasattr(self.exchange, 'fetch_positions'):
-                logging.error("Exchange does not support fetch_positions.")
+            print(f"Checking to see if it's time to exit for {symbol}...")
+            # Retrieve open position details using our helper.
+            positions, openpos, pos_size, position_side, index = self.open_positions(symbol)
+            if not openpos:
+                logging.info(f"No open position found for {symbol}.")
                 return (False, False, 0, None)
-            
-            positions = self.exchange.fetch_positions()
-            position = None
-            pos_size = 0.0
-
-            # Locate the open position for the specified symbol.
-            for pos in positions:
-                if pos.get("symbol") == symbol:
-                    if "contracts" in pos:
-                        pos_size = float(pos.get("contracts", 0))
-                    elif "positionAmt" in pos:
-                        pos_size = float(pos.get("positionAmt", 0))
-                    else:
-                        pos_size = 0.0
-
-                    if pos_size != 0:
-                        position = pos
-                        break
-            
-            if not position:
-                logging.info(f"No open position found for symbol {symbol}.")
-                return (False, False, 0, None)
-            
-            # Extract key position parameters.
-            side = position.get("side", "").lower()   # expecting "long" or "short"
+            position = positions[index]
             entry_price = float(position.get("entryPrice", 0))
-            leverage = float(position.get("leverage", 1))  # default to 1 if not provided
-            position_size = abs(pos_size)
+            leverage = float(position.get("leverage", 1))
             
-            # Retrieve current order book prices.
+            # Retrieve orders book prices.
             ask, bid = self.ask_bid(symbol)
-            # Determine the effective exit price based on position side.
-            if side == "long":
-                # Selling a long position: use the bid price.
-                exit_price = bid
+            
+            # Determine the effective exit price.
+            if position_side is True:
+                # For a long position, selling at bid.
+                current_price = bid
                 is_long = True
-            elif side == "short":
-                # Buying to close a short: use the ask price.
-                exit_price = ask
+            elif position_side is False:
+                # For a short position, buying to close at ask.
+                current_price = ask
                 is_long = False
             else:
-                logging.error(f"Unknown position side for {symbol}: {side}")
-                exit_price = None
-                is_long = None
+                logging.error(f"Unknown position side for {symbol}.")
+                return (False, True, pos_size, None)
             
-            if exit_price is None:
-                logging.error("Failed to retrieve exit price from order book.")
-                return (False, True, position_size, is_long)
-            
-            # Calculate the PnL percentage.
-            if side == "long":
-                diff = exit_price - entry_price
-            else:  # For short positions.
-                diff = entry_price - exit_price
+            # Calculate the profit/loss percentage.
+            diff = (current_price - entry_price) if is_long else (entry_price - current_price)
             pnl_perc = (diff / entry_price) * leverage * 100.0
             pnl_perc = round(pnl_perc, 2)
-            logging.info(f"For {symbol}, current PnL is: {pnl_perc}% (Entry: {entry_price}, Exit: {exit_price})")
+            logging.info(f"For {symbol}, current PnL is: {pnl_perc}% (Entry: {entry_price}, Exit: {current_price})")
             
             pnl_trigger = False
-            # Trigger kill switch if profit target is reached.
+            # Trigger kill switch if profit or loss conditions are met.
             if pnl_perc >= target:
                 logging.info(f"Profit target reached for {symbol}: {pnl_perc}% ≥ {target}%. Initiating kill switch.")
                 pnl_trigger = True
                 self.kill_switch(symbol)
-            # Trigger kill switch if maximum loss threshold is reached.
             elif pnl_perc <= max_loss:
                 logging.info(f"Maximum loss threshold reached for {symbol}: {pnl_perc}% ≤ {max_loss}%. Initiating kill switch.")
                 pnl_trigger = True
@@ -466,8 +509,7 @@ class Executor:
             else:
                 logging.info(f"No exit condition met for {symbol}: PnL at {pnl_perc}% (Target: {target}%, Max Loss: {max_loss}%).")
             
-            return (pnl_trigger, True, position_size, is_long)
-        
+            return (pnl_trigger, True, pos_size, is_long)
         except Exception as e:
             logging.error(f"Error in pnl_close for {symbol}: {e}")
             return (False, False, 0, None)
