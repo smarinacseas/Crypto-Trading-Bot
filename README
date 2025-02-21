@@ -1,54 +1,48 @@
-Solana Trading Bot
+# 🚀 Automated Trading Bot
 
-Overview:
-This project is an attempt at creating a Solana trading bot for self-learning purposes. The primary goals are to:
-- Deepen understanding of blockchain development.
-- Improve Python programming skills.
-- Experiment with accessing and utilizing financial/blockchain data feeds.
-- Develop the capability to perform automated trading actions based on real-time and historical market data.
+## 📌 Overview
+This project is an automated trading bot that supports **real-time market data feeds, order execution, and API-based interactions** with multiple exchanges. Designed for **high-frequency trading, strategy backtesting, and automated execution**, the bot can connect to **Binance, MEXC, and HyperLiquid**.
 
-The bot is designed to be flexible, allowing for the implementation of different trading strategies and the ability to backtest these strategies using historical market data.
+The bot is modular and scalable, allowing for future enhancements such as **AI-driven trading strategies, backtesting, and risk management**.
 
-Features:
-- Real-time Market Data: Connect to WebSocket data feeds to receive real-time market updates.
-- Automated Trading: Execute trades based on predefined strategies.
-- Flexible Strategy Implementation: Easily implement and switch between different trading strategies.
-- Backtesting: Test strategies against historical market data to evaluate their performance.
-- Secure Transactions: Handle private keys securely to ensure safe trading.
+---
 
-Rough Project Structure:
-solana-trading-bot/
-│
-├── config/
-│   └── config.json       # Configuration file
-│
-├── src/
-│   ├── __init__.py       # Makes the src directory a package
-│   ├── bot.py            # Main bot logic
-│   ├── utils.py          # Utility functions
-│   ├── websocket_client.py # WebSocket client
-│   └── strategy.py       # Strategy implementation
-│
-├── venv/                 # Virtual environment directory
-│
-├── .gitignore            # Git ignore file
-│
-└── requirements.txt      # List of dependencies
+## 🔥 Features
 
-Utility Functions:
-- Utility functions for common tasks are implemented in `src/utils.py`.
+### ✅ **Live Market Data Feeds**
+- **Binance Exchange (CLI Output)**
+  - Standard Trade Stream
+  - Aggregated Trade Stream (High-Volume Trades)
+  - Funding Rates Stream
+  - Liquidations Stream
 
-WebSocket Client:
-- The WebSocket client in `src/websocket_client.py` handles real-time data feeds.
+### ✅ **Exchange Connectivity**
+- **MEXC via `CCXT` Library**  
+  - Easily interchangeable with any **CCXT-supported exchange**.
+- **HyperLiquid via `HyperLiquid` SDK**  
+  - Supports **order execution, position management, and balance retrieval**.
 
-Strategy Implementation:
-- The `src/strategy.py` file contains the implementation of trading strategies. Define multiple strategies and switch between them as needed.
+### ✅ **Getting Started**
+- Clone the repository
+```
+git clone https://github.com/yourusername/solana-trading-bot.git
+```
+- Install the dependencies
+```
+pip install -r requirements.txt
+```
+- Run the bot
+```
+uvicorn backend.app.main:app --reload
+```
+Navigate to http://127.0.0.1:8000/docs to interact with the endpoints
 
-Backtesting:
-- Implement backtesting functionality in `src/backtesting.py` to evaluate strategies using historical market data.
-
-Future Improvements:
-- Enhanced Security: Implement advanced security measures for key management.
-- Advanced Strategies: Develop and test more sophisticated trading strategies.
-- Comprehensive Backtesting: Integrate a robust backtesting framework to improve strategy evaluation.
-- User Interface: Develop a simple user interface to control and monitor the bot.
+### ✅ **Planned Features**
+- More robust exchange support (Bybit, KuCoin, Kraken, etc.)
+- Trading signals & indicators (SMA, RSI, VWAP, VWMA, TA-Lib integration)
+- Advanced risk management (Stop-loss, take-profit, trailing stops)
+- Multiple trading strategies (Scalping, Mean Reversion, Momentum Trading)
+- Backtesting & Strategy Optimization
+- Automated execution based on AI-driven signals
+- Mock trading & real-time PnL tracking
+- Web-based front-end for easy control & monitoring
