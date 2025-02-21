@@ -349,6 +349,129 @@ class Executor:
             logging.error(error_msg)
             return error_msg
 
+    def ask_bid(self, symbol):
+        """
+        Retrieve the current order book for the specified symbol and return the ask and bid prices.
+        
+        Returns:
+            tuple: (ask, bid) where:
+                ask (float): the lowest ask price.
+                bid (float): the highest bid price.
+        """
+        try:
+            ob = self.exchange.fetch_order_book(symbol)
+            bid = ob['bids'][0][0] if ob.get('bids') and len(ob['bids']) else None
+            ask = ob['asks'][0][0] if ob.get('asks') and len(ob['asks']) else None
+            logging.info(f"ask_bid for {symbol}: ask={ask}, bid={bid}")
+            return ask, bid
+        except Exception as e:
+            logging.error(f"Error fetching order book for {symbol}: {e}")
+            return None, None
+
+    def pnl_close(self, symbol, target, max_loss):
+        """
+        Evaluate the profit or loss (PnL) for the open position on the given symbol and 
+        trigger the kill switch if either the profit target or maximum loss threshold is reached.
+
+        This method uses the exchange's order book (via ask_bid) to obtain the current exit price.
+        - For a long position, we're selling at the bid price.
+        - For a short position, we're buying to close at the ask price.
+
+        Parameters:
+            symbol (str): Trading pair symbol (e.g., 'SOL/USDT').
+            target (float): Profit target percentage threshold (e.g., 5 for 5% profit).
+            max_loss (float): Maximum loss percentage threshold (e.g., -2 for -2% loss).
+
+        Returns:
+            tuple: (pnl_trigger, in_position, position_size, is_long)
+                - pnl_trigger (bool): True if the kill switch was triggered.
+                - in_position (bool): True if an open position was found.
+                - position_size (float): The absolute size of the open position.
+                - is_long (bool or None): True if the position is long, False if short, or None if undefined.
+        """
+        try:
+            # Ensure that the exchange supports fetch_positions.
+            if not hasattr(self.exchange, 'fetch_positions'):
+                logging.error("Exchange does not support fetch_positions.")
+                return (False, False, 0, None)
+            
+            positions = self.exchange.fetch_positions()
+            position = None
+            pos_size = 0.0
+
+            # Locate the open position for the specified symbol.
+            for pos in positions:
+                if pos.get("symbol") == symbol:
+                    if "contracts" in pos:
+                        pos_size = float(pos.get("contracts", 0))
+                    elif "positionAmt" in pos:
+                        pos_size = float(pos.get("positionAmt", 0))
+                    else:
+                        pos_size = 0.0
+
+                    if pos_size != 0:
+                        position = pos
+                        break
+            
+            if not position:
+                logging.info(f"No open position found for symbol {symbol}.")
+                return (False, False, 0, None)
+            
+            # Extract key position parameters.
+            side = position.get("side", "").lower()   # expecting "long" or "short"
+            entry_price = float(position.get("entryPrice", 0))
+            leverage = float(position.get("leverage", 1))  # default to 1 if not provided
+            position_size = abs(pos_size)
+            
+            # Retrieve current order book prices.
+            ask, bid = self.ask_bid(symbol)
+            # Determine the effective exit price based on position side.
+            if side == "long":
+                # Selling a long position: use the bid price.
+                exit_price = bid
+                is_long = True
+            elif side == "short":
+                # Buying to close a short: use the ask price.
+                exit_price = ask
+                is_long = False
+            else:
+                logging.error(f"Unknown position side for {symbol}: {side}")
+                exit_price = None
+                is_long = None
+            
+            if exit_price is None:
+                logging.error("Failed to retrieve exit price from order book.")
+                return (False, True, position_size, is_long)
+            
+            # Calculate the PnL percentage.
+            if side == "long":
+                diff = exit_price - entry_price
+            else:  # For short positions.
+                diff = entry_price - exit_price
+            pnl_perc = (diff / entry_price) * leverage * 100.0
+            pnl_perc = round(pnl_perc, 2)
+            logging.info(f"For {symbol}, current PnL is: {pnl_perc}% (Entry: {entry_price}, Exit: {exit_price})")
+            
+            pnl_trigger = False
+            # Trigger kill switch if profit target is reached.
+            if pnl_perc >= target:
+                logging.info(f"Profit target reached for {symbol}: {pnl_perc}% ≥ {target}%. Initiating kill switch.")
+                pnl_trigger = True
+                self.kill_switch(symbol)
+            # Trigger kill switch if maximum loss threshold is reached.
+            elif pnl_perc <= max_loss:
+                logging.info(f"Maximum loss threshold reached for {symbol}: {pnl_perc}% ≤ {max_loss}%. Initiating kill switch.")
+                pnl_trigger = True
+                self.kill_switch(symbol)
+            else:
+                logging.info(f"No exit condition met for {symbol}: PnL at {pnl_perc}% (Target: {target}%, Max Loss: {max_loss}%).")
+            
+            return (pnl_trigger, True, position_size, is_long)
+        
+        except Exception as e:
+            logging.error(f"Error in pnl_close for {symbol}: {e}")
+            return (False, False, 0, None)
+
 
 if __name__ == '__main__':
     print("CCXT Automated Trading Skeleton")
