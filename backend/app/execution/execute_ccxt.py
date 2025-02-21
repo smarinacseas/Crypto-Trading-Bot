@@ -246,86 +246,104 @@ class Executor:
 
     def kill_switch(self, symbol=None):
         """
-        Kill switch to cancel all open orders and close all positions.
-        
-        If 'symbol' is provided, this method will operate on that symbol only.
-        Otherwise, it attempts to fetch positions (if supported) and applies the kill 
-        switch for each position with a nonzero size.
-        
+        Kill switch to cancel all open orders and close all positions. Iterates until all positions are closed.
+
+        If 'symbol' is provided, the method operates on that symbol only.
+        Otherwise, it attempts to fetch positions (if supported) and applies the kill switch for
+        each position with a nonzero size.
+
         The process involves:
           1. Canceling all open orders for the symbol.
           2. Fetching positions (if the exchange supports fetch_positions).
-          3. For each position with a nonzero size:
+          3. For each position with a nonzero amount:
                - Determining the closing side (sell for long positions, buy for short positions).
                - Issuing a market order to close the position using the full position size.
+          4. Waiting briefly and re-checking until no open positions remain.
         
         Returns:
-            A dictionary summarizing the actions taken for each symbol, or an error message.
+            A string confirmation message if all positions have been closed,
+            or an error message if something fails.
         """
         result = {}
         try:
-            if symbol:
-                # Cancel orders for the given symbol and try closing its position.
-                cancel_result = self.cancel_all_orders(symbol)
-                result[symbol] = {"cancel": cancel_result}
-                if hasattr(self.exchange, 'fetch_positions'):
-                    positions = self.exchange.fetch_positions()
-                    # Find the position for the given symbol.
-                    for pos in positions:
-                        if pos.get("symbol") == symbol:
-                            # Use 'contracts' or 'positionAmt' depending on exchange implementation.
+            while True:
+                all_closed = True
+
+                if symbol:
+                    # Process for a specific symbol.
+                    cancel_result = self.cancel_all_orders(symbol)
+                    result[symbol] = {"cancel": cancel_result}
+                    if hasattr(self.exchange, 'fetch_positions'):
+                        positions = self.exchange.fetch_positions()
+                        position_found = False
+                        for pos in positions:
+                            if pos.get("symbol") == symbol:
+                                position_found = True
+                                # Determine the position amount using 'contracts' or 'positionAmt'.
+                                if "contracts" in pos:
+                                    position_amount = float(pos.get("contracts", 0))
+                                elif "positionAmt" in pos:
+                                    position_amount = float(pos.get("positionAmt", 0))
+                                else:
+                                    position_amount = 0.0
+
+                                if position_amount != 0:
+                                    all_closed = False
+                                    closing_side = "sell" if position_amount > 0 else "buy"
+                                    order_amount = abs(position_amount)
+                                    create_order_response = self.create_order(
+                                        symbol, 
+                                        order_type="market", 
+                                        side=closing_side, 
+                                        amount=order_amount
+                                    )
+                                    result[symbol]["close_position"] = create_order_response
+                        if not position_found:
+                            result[symbol]["close_position"] = "No open position for symbol."
+                    else:
+                        result[symbol]["close_position"] = "Exchange does not support fetch_positions."
+                else:
+                    # Process for all symbols.
+                    if hasattr(self.exchange, 'fetch_positions'):
+                        positions = self.exchange.fetch_positions()
+                        for pos in positions:
+                            s = pos.get("symbol")
                             if "contracts" in pos:
                                 position_amount = float(pos.get("contracts", 0))
                             elif "positionAmt" in pos:
                                 position_amount = float(pos.get("positionAmt", 0))
                             else:
                                 position_amount = 0.0
-                            
+
                             if position_amount != 0:
+                                all_closed = False
+                                cancel_result = self.cancel_all_orders(s)
                                 closing_side = "sell" if position_amount > 0 else "buy"
                                 order_amount = abs(position_amount)
                                 create_order_response = self.create_order(
-                                    symbol, 
+                                    s, 
                                     order_type="market", 
                                     side=closing_side, 
                                     amount=order_amount
                                 )
-                                result[symbol]["close_position"] = create_order_response
+                                result[s] = {"cancel": cancel_result, "close_position": create_order_response}
                             else:
-                                result[symbol]["close_position"] = "No open position for symbol."
-                else:
-                    result[symbol]["close_position"] = "Exchange does not support fetch_positions."
-            else:
-                # No symbol provided - attempt to kill positions for all symbols.
-                if hasattr(self.exchange, 'fetch_positions'):
-                    positions = self.exchange.fetch_positions()
-                    for pos in positions:
-                        s = pos.get("symbol")
-                        # Use 'contracts' or 'positionAmt' depending on the exchange.
-                        if "contracts" in pos:
-                            position_amount = float(pos.get("contracts", 0))
-                        elif "positionAmt" in pos:
-                            position_amount = float(pos.get("positionAmt", 0))
-                        else:
-                            position_amount = 0.0
+                                result[s] = {"cancel": "No open orders", "close_position": "No open position."}
+                    else:
+                        result["error"] = "Exchange does not support fetch_positions."
+                        logging.info(result["error"])
+                        return result["error"]
 
-                        if position_amount != 0:
-                            cancel_result = self.cancel_all_orders(s)
-                            closing_side = "sell" if position_amount > 0 else "buy"
-                            order_amount = abs(position_amount)
-                            create_order_response = self.create_order(
-                                s, 
-                                order_type="market", 
-                                side=closing_side, 
-                                amount=order_amount
-                            )
-                            result[s] = {"cancel": cancel_result, "close_position": create_order_response}
-                        else:
-                            result[s] = {"cancel": "No open orders", "close_position": "No open position."}
+                logging.info(f"Kill switch iteration result: {result}")
+                if all_closed:
+                    break
                 else:
-                    result["error"] = "Exchange does not support fetch_positions."
-            logging.info(f"Kill switch result: {result}")
-            return result
+                    time.sleep(5)  # Brief delay before rechecking positions.
+            
+            final_message = "Kill switch executed. All positions have been closed."
+            logging.info(final_message)
+            return final_message
+
         except Exception as e:
             error_msg = f"Error executing kill switch: {e}"
             logging.error(error_msg)
