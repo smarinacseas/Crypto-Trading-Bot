@@ -2,7 +2,7 @@
 
 ## 📌 Overview
 
-This project is an automated trading bot that supports **real-time market data feeds, order execution, and API-based interactions** with multiple exchanges. Designed for **high-frequency trading, strategy backtesting, and automated execution**, the bot can connect to **Binance, MEXC, and HyperLiquid**.
+This project is an automated trading bot that supports **real-time market data feeds, order execution, and API-based interactions** with multiple exchanges. Designed for **emotionless trading, strategy backtesting, risk management, and automated execution**, the bot can connect to **Binance (data streams) and MEXC & HyperLiquid (order execution)**.
 
 The bot is modular and scalable, allowing for future enhancements such as **AI-driven trading strategies, backtesting, and risk management**.
 
