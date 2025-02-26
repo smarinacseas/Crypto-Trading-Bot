@@ -1,6 +1,6 @@
 import ccxt
 import os
-import schedule  # Optional for scheduled execution
+import schedule  # Optional: schedule tasks if needed
 import time
 import logging
 
@@ -12,12 +12,11 @@ import logging
 
 class Executor:
     def __init__(self, exchange_name):
-        """Initialize the Executor with the given exchange name and its API credentials.
-        
-        The API key and secret are obtained from environment variables using the pattern:
-            {EXCHANGE_NAME}_API_KEY
-            {EXCHANGE_NAME}_SECRET_KEY
-        For example, for 'MEXC', it will look for MEXC_API_KEY and MEXC_SECRET_KEY.
+        """
+        Initialize the Executor.
+        - Fetch API credentials from environment variables using the pattern:
+          {EXCHANGE_NAME}_API_KEY and {EXCHANGE_NAME}_SECRET_KEY.
+        - Sets up the exchange instance via initialize_exchange().
         """
         self.exchange_name = exchange_name.upper()
         self.api_key = os.getenv(f"{self.exchange_name}_API_KEY")
@@ -27,9 +26,13 @@ class Executor:
         self.initialize_exchange()
 
     def initialize_exchange(self):
-        """Initialize the ccxt exchange instance based on the exchange name."""
+        """
+        Dynamically initialize the ccxt exchange instance.
+        - For example, for MEXC we use ccxt.mexc.
+        - Relies on CCXT's dynamic loading of exchange modules.
+        """
         try:
-            # ccxt exchange classes are typically named in lower-case (e.g., ccxt.mexc)
+            # ccxt uses lowercase exchange ids.
             exchange_id = self.exchange_name.lower()
             if not hasattr(ccxt, exchange_id):
                 raise ValueError(f"Exchange '{exchange_id}' is not supported by ccxt.")
@@ -40,15 +43,14 @@ class Executor:
                 'secret': self.secret,
             })
         except Exception as e:
-            message = f"Exchange initialization error: {e}"
-            print(message)
+            print(f"Exchange initialization error: {e}")
             raise
 
     def fetch_balance(self, meaningful_only=False, threshold=0.1):
         """
-        Fetch the wallet balance from the exchange.
-        If meaningful_only is True, only assets with a balance greater than threshold are displayed.
-        Returns a formatted message of the balances.
+        Fetch wallet balance using ccxt.fetch_balance().
+        - Optionally filter only assets with a balance > threshold.
+        - Note: MEXC returns a dictionary with keys like 'total' and 'free'.
         """
         try:
             balance = self.exchange.fetch_balance()
@@ -69,15 +71,9 @@ class Executor:
 
     def create_order(self, symbol, order_type, side, amount, price=None, params=None):
         """
-        Create an order for the specified symbol with variable settings.
-        
-        order_type: str - Type of order ('limit', 'market', 'stop', etc.)
-        side: str - 'buy' or 'sell'
-        amount: float - Order amount
-        price: float or None - Order price (may be omitted for market orders)
-        params: dict or None - Additional parameters (e.g., triggerPrice for stop orders)
-        
-        Returns a formatted string with order status.
+        Create an order via ccxt.create_order().
+        - Wraps the MEXC API call; relies on CCXT to sign and handle errors.
+        - Supports both market and limit orders.
         """
         try:
             if params is None:
@@ -101,12 +97,13 @@ class Executor:
 
     def fetch_open_orders(self, symbol):
         """
-        Retrieve open orders for the user and format them into a readable string.
+        Retrieve open orders for the specified symbol.
+        - Uses the exchange's API (MEXC supports this with fetchOpenOrders).
+        - Formats the orders into a human-readable string.
         """
         try:
             orders = self.exchange.info.open_orders(self.address)
             if orders:
-                # Format each order into a readable string
                 output = "\n".join(
                     f"Order ID: {order.get('oid', 'N/A')}, "
                     f"Coin: {order.get('coin', 'N/A')}, "
@@ -128,13 +125,13 @@ class Executor:
 
     def cancel_all_orders(self, symbol):
         """
-        Cancel all orders for the specified symbol.
-        Returns a formatted confirmation message.
+        Cancel all orders for the given symbol.
+        - Leverages ccxt.cancel_all_orders(), which MEXC supports.
+        - Builds a summary string from the response.
         """
         try:
             cancelled_orders = self.exchange.cancel_all_orders(symbol)
             if cancelled_orders:
-                # Build a human-readable summary for each cancelled order.
                 order_details = []
                 for order in cancelled_orders:
                     order_info = (
@@ -157,13 +154,9 @@ class Executor:
 
     def set_leverage(self, leverage, symbol, params=None):
         """
-        Set the leverage for the given symbol.
-        
-        leverage: int or float - desired leverage
-        symbol: str - trading pair symbol
-        params: dict or None - additional parameters
-        
-        Returns a formatted message indicating success or failure.
+        Set the leverage for the specified symbol.
+        - Uses ccxt.set_leverage if available (MEXC supports this).
+        - Returns the result or a message if unsupported.
         """
         try:
             if params is None:
@@ -182,16 +175,9 @@ class Executor:
 
     def create_perpetual_futures_order(self, symbol, order_type, side, amount, price=None, params=None, leverage=None):
         """
-        Create a perpetual futures order for the specified symbol.
-        
-        order_type: str - Type of order ('limit', 'market', 'stop', etc.)
-        side: str - 'buy' or 'sell'
-        amount: float - Order amount
-        price: float or None - Order price (if omitted for market orders)
-        params: dict or None - Additional parameters for the order; defaults to {'contractType': 'perpetual'}
-        leverage: int or float or None - Optional leverage setting
-        
-        Returns a formatted string with the order details.
+        Create a perpetual futures order.
+        - Sets leverage if provided.
+        - Uses additional parameters (like 'contractType': 'perpetual') required by MEXC for derivatives.
         """
         try:
             if leverage is not None:
@@ -245,25 +231,18 @@ class Executor:
 
     def open_positions(self, symbol):
         """
-        Retrieve open position details for the given symbol using the exchange's fetch_positions method.
-
-        Returns a tuple: 
-          (positions, openpos_bool, position_size, is_long, index)
-        where:
-          - positions: the full list of fetched positions (filtered by symbol)
-          - openpos_bool (bool): True if an open position exists for symbol.
-          - position_size (float): absolute size of the position.
-          - is_long (bool or None): True if the position is long, False if short.
-          - index (int): the index of the position in the positions list (0 if only one exists).
+        Retrieve open position details for a given symbol.
+        - Uses ccxt.fetch_positions() which MEXC supports.
+        - Parses the response and returns a tuple:
+          (positions, openpos_bool, position_size, is_long, index).
+        - Assumes one position per symbol.
         """
         try:
-            # Depending on your exchange, you may supply parameters such as type and code.
+            # For futures positions, additional parameters may be required (e.g., 'type': 'swap', 'code': 'USD').
             params = {'type': 'swap', 'code': 'USD'}
             positions = self.exchange.fetch_positions([symbol], params)
             if positions and len(positions) > 0:
-                # We assume there is one position per symbol. (Adjust if multiple positions are possible.)
-                position = positions[0]
-                pos_size = 0.0
+                position = positions[0]  # Assumes one position per symbol.
                 if "contracts" in position:
                     pos_size = float(position.get("contracts", 0))
                 elif "positionAmt" in position:
@@ -285,41 +264,52 @@ class Executor:
             logging.error(f"Error fetching open positions for {symbol}: {e}")
             return (None, False, 0, None, None)
 
+    def ask_bid(self, symbol):
+        """
+        Helper method to retrieve the current ask and bid from the order book.
+        - Uses ccxt.fetch_order_book(), which MEXC supports.
+        - Returns ask and bid prices as floats.
+        """
+        try:
+            order_book = self.exchange.fetch_order_book(symbol)
+            ask = order_book['asks'][0][0] if order_book.get('asks') and len(order_book['asks']) > 0 else None
+            bid = order_book['bids'][0][0] if order_book.get('bids') and len(order_book['bids']) > 0 else None
+            return ask, bid
+        except Exception as e:
+            print(f"Error fetching ask/bid for {symbol}: {e}")
+            return None, None
+
     def kill_switch(self, symbol):
         """
         Kill switch to cancel all open orders and close the open position for the given symbol.
-        
-        This updated method handles both futures and spot positions.
-        For futures positions, it uses fetch_positions.
-        For spot positions, it checks the base asset balance from fetch_balance.
-        
-        Returns a confirmation message on success or an error message.
+        - Handles futures positions via fetch_positions and spot positions via fetch_balance.
+        - For spot positions, obtains the base currency from market info.
+        - Uses ask_bid() to obtain order book prices, then creates an order to exit the position.
+        - Loops until the position is closed.
         """
         try:
             print(f"Starting the kill switch for {symbol}")
-            # Attempt to get futures positions first.
+            # Check futures positions first.
             positions, openpos, kill_size, is_long, _ = self.open_positions(symbol)
-            is_futures = False
-            if openpos and kill_size > 0:
-                is_futures = True
-            else:
-                # Check for spot position using balance.
+            is_futures = openpos and kill_size > 0
+            if not is_futures:
+                # For spot, determine the base currency and current free balance.
                 try:
                     market = self.exchange.market(symbol)
                     if not isinstance(market, dict):
-                        raise ValueError(f"Market info for {symbol} is not a dictionary: {market}")
+                        raise ValueError(f"Market info for {symbol} is not a dict: {market}")
                     base_currency = market['base']
                 except Exception as e:
-                    print(f"Error fetching market info for symbol {symbol}: {e}")
+                    print(f"Error fetching market info for {symbol}: {e}")
                     base_currency = symbol.split('/')[0]
                 balance = self.exchange.fetch_balance()
                 if not isinstance(balance, dict):
-                    raise ValueError(f"Balance info is not a dictionary: {balance}")
+                    raise ValueError(f"Balance info is not a dict: {balance}")
                 spot_balance = balance.get('free', {}).get(base_currency, 0)
                 if spot_balance > 0:
                     openpos = True
                     kill_size = spot_balance
-                    is_long = True  # For spot positions, we assume a long (asset holding) position.
+                    is_long = True  # Spot positions assume holding the asset.
                     is_futures = False
                     print(f"Detected spot position for {symbol}: {base_currency} balance = {spot_balance}")
                 else:
@@ -330,7 +320,7 @@ class Executor:
             while openpos:
                 print("Kill switch loop initiated...")
                 
-                # Cancel all open orders for the symbol.
+                # Cancel open orders before proceeding.
                 cancel_response = self.cancel_all_orders(symbol)
                 print(f"Cancelled orders for {symbol}. Response: {cancel_response}")
 
@@ -341,32 +331,33 @@ class Executor:
                 else:
                     balance = self.exchange.fetch_balance()
                     if not isinstance(balance, dict):
-                        raise ValueError(f"Balance info is not a dictionary: {balance}")
+                        raise ValueError(f"Balance info is not a dict: {balance}")
                     try:
                         market = self.exchange.market(symbol)
                         if not isinstance(market, dict):
-                            raise ValueError(f"Market info for {symbol} is not a dictionary: {market}")
+                            raise ValueError(f"Market info for {symbol} is not a dict: {market}")
                         base_currency = market['base']
                     except Exception as e:
-                        print(f"Error fetching market info for symbol {symbol}: {e}")
+                        print(f"Error fetching market info for {symbol}: {e}")
                         base_currency = symbol.split('/')[0]
                     spot_balance = balance.get('free', {}).get(base_currency, 0)
                     openpos = spot_balance > 0
                     kill_size = spot_balance
-                    is_long = True  # Spot trading positions are assumed to be long.
-                
+                    is_long = True  # Spot positions considered as long.
+                    print(f"Updated spot position state: openpos={openpos}, kill_size={kill_size}")
+
                 if not openpos:
                     break
 
-                # Retrieve order book prices.
+                # Retrieve current ask and bid prices from the order book.
                 ask, bid = self.ask_bid(symbol)
                 if ask is None or bid is None:
-                    raise ValueError(f"Order book prices for {symbol} are not valid: ask={ask}, bid={bid}")
+                    raise ValueError(f"Invalid order book prices for {symbol}: ask={ask}, bid={bid}")
                 print(f"For {symbol}: ask={ask}, bid={bid}")
 
                 try:
                     if is_futures:
-                        # For a long futures position, sell at the ask price.
+                        # For futures, choose side based on whether position is long or short.
                         if is_long:
                             order = self.exchange.create_order(
                                 symbol=symbol,
@@ -376,9 +367,8 @@ class Executor:
                                 price=ask,
                                 params={}
                             )
-                            print(f"Placed LIMIT SELL order to close long futures position for {symbol}: {order}")
+                            print(f"Placed LIMIT SELL order to close long futures position: {order}")
                         else:
-                            # For a short futures position, buy at the bid price.
                             order = self.exchange.create_order(
                                 symbol=symbol,
                                 type="limit",
@@ -387,34 +377,33 @@ class Executor:
                                 price=bid,
                                 params={}
                             )
-                            print(f"Placed LIMIT BUY order to close short futures position for {symbol}: {order}")
+                            print(f"Placed LIMIT BUY order to close short futures position: {order}")
                     else:
-                        # For spot positions, use our Executor.create_order method (which handles response parsing)
+                        # For spot, use our create_order() wrapper to ensure proper parsing.
                         result_message = self.create_order(symbol, "limit", "sell", kill_size, ask, params={})
-                        print(f"Placed LIMIT SELL spot order for {symbol}: {result_message}")
-
+                        print(f"Placed LIMIT SELL spot order: {result_message}")
                 except Exception as e:
                     print(f"Error placing order for {symbol}: {e}")
                     break
 
-                print("Sleeping for 30 seconds to allow the order to fill...")
+                print("Sleeping for 30 seconds to allow order execution...")
                 time.sleep(30)
 
-                # Update the position state after sleep.
+                # Update position state after sleep.
                 if is_futures:
                     _, openpos, kill_size, is_long, _ = self.open_positions(symbol)
                     print(f"Updated futures position state: openpos={openpos}, kill_size={kill_size}, is_long={is_long}")
                 else:
                     balance = self.exchange.fetch_balance()
                     if not isinstance(balance, dict):
-                        raise ValueError(f"Balance info is not a dictionary: {balance}")
+                        raise ValueError(f"Balance info is not a dict: {balance}")
                     try:
                         market = self.exchange.market(symbol)
                         if not isinstance(market, dict):
-                            raise ValueError(f"Market info for {symbol} is not a dictionary: {market}")
+                            raise ValueError(f"Market info for {symbol} is not a dict: {market}")
                         base_currency = market['base']
                     except Exception as e:
-                        print(f"Error fetching market info for symbol {symbol}: {e}")
+                        print(f"Error fetching market info for {symbol}: {e}")
                         base_currency = symbol.split('/')[0]
                     spot_balance = balance.get('free', {}).get(base_currency, 0)
                     openpos = spot_balance > 0
@@ -427,25 +416,6 @@ class Executor:
             error_msg = f"Error executing kill switch for {symbol}: {e}"
             print(error_msg)
             return error_msg
-
-    def ask_bid(self, symbol):
-        """
-        Retrieve the current order book for the specified symbol and return the ask and bid prices.
-        
-        Returns:
-            tuple: (ask, bid) where:
-                ask (float): the lowest ask price.
-                bid (float): the highest bid price.
-        """
-        try:
-            ob = self.exchange.fetch_order_book(symbol)
-            bid = ob['bids'][0][0] if ob.get('bids') and len(ob['bids']) else None
-            ask = ob['asks'][0][0] if ob.get('asks') and len(ob['asks']) else None
-            logging.info(f"ask_bid for {symbol}: ask={ask}, bid={bid}")
-            return ask, bid
-        except Exception as e:
-            logging.error(f"Error fetching order book for {symbol}: {e}")
-            return None, None
 
     def pnl_close(self, symbol, target, max_loss):
         """
