@@ -97,6 +97,9 @@ def sma_df(symbol, timeframe, weeks, sma):
     print(df.head())
     return df
 
+# Relative Strength Index
+
+
 if __name__ == "__main__":
     # Simple Moving Average
     # Provide the desired parameters here.
