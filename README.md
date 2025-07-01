@@ -51,13 +51,23 @@ conda activate <env_name>
 pip install -r requirements.txt
 ```
 
-- Run the bot
+- Run the backend API
 
 ```
 uvicorn backend.app.main:app --reload
 ```
 
-Navigate to http://127.0.0.1:8000/docs to interact with the endpoints
+Navigate to http://127.0.0.1:8000/docs to interact with the API endpoints
+
+- Run the frontend (in a separate terminal)
+
+```
+cd frontend
+npm install
+npm start
+```
+
+Navigate to http://localhost:3000 to access the trading dashboard
 
 ### ⏳ **Planned Features**
 
@@ -68,4 +78,9 @@ Navigate to http://127.0.0.1:8000/docs to interact with the endpoints
 - Backtesting & Strategy Optimization
 - Automated execution based on AI-driven signals
 - Mock trading & real-time PnL tracking
-- Web-based front-end for easy control & monitoring
+- ✅ **Web-based Trading Dashboard**
+  - Real-time price monitoring and live data streams
+  - Manual trading interface with order placement
+  - Automated strategy management and control
+  - Technical indicator visualization and configuration
+  - Position management and P&L tracking
