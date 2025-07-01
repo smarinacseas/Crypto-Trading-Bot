@@ -98,4 +98,16 @@ frontend/dist/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+# Backend configuration and sensitive files
 backend/app/core/config.py
+backend/.env
+backend/app/.env
+backend/data/
+backend/logs/
+backend/temp/
+backend/cache/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
