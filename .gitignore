@@ -62,6 +62,7 @@ solana-trading-bot/venv/
 
 # Ignore .cursorrules
 .cursorrules
+CLAUDE.md
 
 # Node.js dependencies
 node_modules/
