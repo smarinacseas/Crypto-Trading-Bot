@@ -1,5 +1,13 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from backend.app.api.routes import router as api_router
+from backend.app.api.routes.websocket import router as websocket_router
+from backend.app.api.routes.portfolio import router as portfolio_router
+from backend.app.core.auth import fastapi_users, auth_backend
+from backend.app.schemas.user import UserRead, UserCreate
+from backend.app.core.config import settings
+from backend.app.models.user import Base
+from backend.app.core.database import engine, async_engine
 from dotenv import load_dotenv
 
 # Run the following command to start the API on local host:
@@ -8,9 +16,45 @@ from dotenv import load_dotenv
 
 load_dotenv()  # This will load variables from a .env file into the environment
 
-app = FastAPI(title="Solana Trading Bot API")
+# Create database tables
+Base.metadata.create_all(bind=engine)
 
+app = FastAPI(title="Crypto Trading Bot API")
+
+# Create async tables on startup
+@app.on_event("startup")
+async def create_async_tables():
+    async with async_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include routers
 app.include_router(api_router, prefix="/api")
+app.include_router(websocket_router, prefix="/ws")
+app.include_router(portfolio_router, prefix="/api")
+
+# Authentication routes
+app.include_router(
+    fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"]
+)
+app.include_router(
+    fastapi_users.get_register_router(UserRead, UserCreate),
+    prefix="/auth",
+    tags=["auth"],
+)
+app.include_router(
+    fastapi_users.get_users_router(UserRead, UserRead),
+    prefix="/users",
+    tags=["users"],
+)
 
 # Root endpoint
 @app.get("/")
