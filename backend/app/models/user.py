@@ -22,6 +22,10 @@ class User(SQLAlchemyBaseUserTable[int], Base):
     # Relationships
     exchange_accounts = relationship("ExchangeAccount", back_populates="user")
     portfolios = relationship("Portfolio", back_populates="user")
+    created_strategies = relationship("Strategy", back_populates="creator")
+    user_strategies = relationship("UserStrategy", back_populates="user")
+    backtests = relationship("Backtest", back_populates="user")
+    paper_trading_sessions = relationship("PaperTradingSession", back_populates="user")
 
 class ExchangeAccount(Base):
     __tablename__ = "exchange_accounts"

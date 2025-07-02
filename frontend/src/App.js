@@ -6,6 +6,9 @@ import Dashboard from './pages/Dashboard';
 import Trading from './pages/Trading';
 import DataStreams from './pages/DataStreams';
 import Indicators from './pages/Indicators';
+import Strategies from './pages/Strategies';
+import Backtesting from './pages/Backtesting';
+import PaperTrading from './pages/PaperTrading';
 import Account from './pages/Account';
 
 function App() {
@@ -58,6 +61,21 @@ function App() {
         <Route path="/indicators" element={
           <Layout>
             <Indicators />
+          </Layout>
+        } />
+        <Route path="/strategies" element={
+          <Layout>
+            <Strategies />
+          </Layout>
+        } />
+        <Route path="/backtesting" element={
+          <Layout>
+            <Backtesting />
+          </Layout>
+        } />
+        <Route path="/paper-trading" element={
+          <Layout>
+            <PaperTrading />
           </Layout>
         } />
         <Route path="/account" element={

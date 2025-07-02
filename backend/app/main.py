@@ -3,10 +3,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.app.api.routes import router as api_router
 from backend.app.api.routes.websocket import router as websocket_router
 from backend.app.api.routes.portfolio import router as portfolio_router
+from backend.app.api.routes.strategies import router as strategies_router
+from backend.app.api.routes.backtests import router as backtests_router
+from backend.app.api.routes.paper_trading import router as paper_trading_router
 from backend.app.core.auth import fastapi_users, auth_backend
 from backend.app.schemas.user import UserRead, UserCreate
 from backend.app.core.config import settings
 from backend.app.models.user import Base
+from backend.app.models import strategy  # Import to register models
+from backend.app.models import backtest  # Import to register models
+from backend.app.models import paper_trading  # Import to register models
 from backend.app.core.database import engine, async_engine
 from dotenv import load_dotenv
 
@@ -40,6 +46,9 @@ app.add_middleware(
 app.include_router(api_router, prefix="/api")
 app.include_router(websocket_router, prefix="/ws")
 app.include_router(portfolio_router, prefix="/api")
+app.include_router(strategies_router, prefix="/api", tags=["strategies"])
+app.include_router(backtests_router, prefix="/api/backtests", tags=["backtests"])
+app.include_router(paper_trading_router, prefix="/api/paper-trading", tags=["paper-trading"])
 
 # Authentication routes
 app.include_router(

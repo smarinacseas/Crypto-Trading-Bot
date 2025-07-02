@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useContext } from 'react';
 import {
   ArrowUpIcon,
   ArrowDownIcon,
@@ -19,6 +19,8 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+import { SymbolOverview } from 'react-ts-tradingview-widgets';
+import { LiveDataContext } from '../components/Layout';
 
 ChartJS.register(
   CategoryScale,
@@ -42,7 +44,9 @@ function Dashboard() {
 
   const [recentPositions, setRecentPositions] = useState([]);
   const [liveMessages, setLiveMessages] = useState([]);
-  const [isConnected, setIsConnected] = useState(false);
+  const [watchlistSymbols] = useState(['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'ADAUSDT']);
+  const [watchlistErrors, setWatchlistErrors] = useState({});
+  const { isConnected } = useContext(LiveDataContext);
 
   const [pnlChart] = useState({
     labels: [],
@@ -81,7 +85,6 @@ function Dashboard() {
     
     ws.onopen = () => {
       console.log('WebSocket connected');
-      setIsConnected(true);
       
       // Start receiving live trade data
       ws.send(JSON.stringify({
@@ -101,7 +104,6 @@ function Dashboard() {
 
     ws.onclose = () => {
       console.log('WebSocket disconnected');
-      setIsConnected(false);
       
       // Attempt to reconnect after 3 seconds
       setTimeout(connectWebSocket, 3000);
@@ -109,11 +111,25 @@ function Dashboard() {
 
     ws.onerror = (error) => {
       console.error('WebSocket error:', error);
-      setIsConnected(false);
     };
 
     return ws; // Return the websocket instance
   }, []); // Empty dependency array to prevent recreation
+
+  const handleWatchlistError = (symbol, error) => {
+    setWatchlistErrors(prev => ({
+      ...prev,
+      [symbol]: error
+    }));
+  };
+
+  const clearWatchlistError = (symbol) => {
+    setWatchlistErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[symbol];
+      return newErrors;
+    });
+  };
 
   useEffect(() => {
     // Fetch portfolio stats
@@ -215,13 +231,6 @@ function Dashboard() {
                   {(portfolioStats.totalPnlUsd || 0) >= 0 ? '+' : ''}{portfolioStats.totalPnlUsd || '0.00'} P&L
                 </span>
               </div>
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-sm opacity-75">Data Connection</div>
-            <div className={`flex items-center ${isConnected ? 'text-green-300' : 'text-red-300'}`}>
-              <div className={`h-2 w-2 rounded-full mr-2 ${isConnected ? 'bg-green-300 animate-pulse' : 'bg-red-300'}`}></div>
-              <span className="text-sm">{isConnected ? 'Live' : 'Disconnected'}</span>
             </div>
           </div>
         </div>
@@ -327,6 +336,51 @@ function Dashboard() {
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Crypto Watchlist */}
+      <div className="card">
+        <h3 className="text-lg font-semibold text-neutral-100 mb-4">Watchlist</h3>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {watchlistSymbols.map((symbol) => (
+            <div key={symbol} className="bg-secondary-700 rounded-lg border border-secondary-600 overflow-hidden">
+              <div className="p-3 border-b border-secondary-600">
+                <h4 className="text-sm font-medium text-neutral-200">{symbol}</h4>
+              </div>
+              <div className="h-64">
+                {watchlistErrors[symbol] ? (
+                  <div className="flex items-center justify-center h-full text-center p-4">
+                    <div>
+                      <p className="text-neutral-400 text-sm mb-2">Failed to load chart</p>
+                      <button 
+                        onClick={() => clearWatchlistError(symbol)}
+                        className="text-primary-400 hover:text-primary-300 text-xs underline"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <SymbolOverview
+                    symbols={[
+                      [
+                        symbol,
+                        symbol,
+                      ],
+                    ]}
+                    chartOnly={false}
+                    width="100%"
+                    height={256}
+                    colorTheme="dark"
+                    isTransparent={true}
+                    locale="en"
+                    onError={() => handleWatchlistError(symbol, 'Widget failed to load')}
+                  />
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, createContext } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   ChartBarIcon,
@@ -12,17 +12,26 @@ import {
   BellIcon,
   SparklesIcon,
   ChevronRightIcon,
+  FireIcon,
+  BeakerIcon,
+  PlayIcon,
 } from '@heroicons/react/24/outline';
 import { Badge } from './ui';
 import AuthModal from './AuthModal';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: ChartBarIcon },
+  { name: 'Strategies', href: '/strategies', icon: FireIcon },
+  { name: 'Backtesting', href: '/backtesting', icon: BeakerIcon },
+  { name: 'Paper Trading', href: '/paper-trading', icon: PlayIcon },
   { name: 'Trading', href: '/trading', icon: CurrencyDollarIcon },
   { name: 'Data Streams', href: '/data-streams', icon: SignalIcon },
   { name: 'Indicators', href: '/indicators', icon: Cog6ToothIcon },
   { name: 'Account', href: '/account', icon: UserIcon },
 ];
+
+// Create a context for live data connection status
+export const LiveDataContext = createContext({ isConnected: false });
 
 function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -30,6 +39,7 @@ function Layout({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const location = useLocation();
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
     // Check if user is authenticated
@@ -69,16 +79,49 @@ function Layout({ children }) {
     navigate('/');
   };
 
+  // WebSocket connection for live data status
+  useEffect(() => {
+    console.log('Attempting WebSocket connection...');
+    const ws = new window.WebSocket('ws://localhost:8000/ws/ws');
+    
+    ws.onopen = () => {
+      console.log('WebSocket connected successfully');
+      setIsConnected(true);
+      ws.send(JSON.stringify({
+        action: 'start_stream',
+        stream_type: 'standard',
+        symbol: 'btcusdt',
+      }));
+    };
+    
+    ws.onclose = () => {
+      console.log('WebSocket disconnected');
+      setIsConnected(false);
+      // Optionally, try to reconnect after a delay
+      // setTimeout(() => connectWebSocket(), 3000);
+    };
+    
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      setIsConnected(false);
+    };
+    
+    return () => {
+      console.log('Cleaning up WebSocket connection');
+      ws.close();
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-secondary-900">
       {/* Mobile sidebar */}
       <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`}>
         <div className="fixed inset-0 bg-secondary-900 bg-opacity-75 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
-        <div className="fixed inset-y-0 left-0 flex w-72 flex-col bg-secondary-800 border-r border-secondary-700 shadow-2xl">
+        <div className="fixed inset-y-0 left-0 flex w-72 flex-col bg-secondary-800 border-r border-secondary-700">
           <div className="flex h-16 items-center justify-between px-6 bg-gradient-to-r from-primary-600 to-sage-600">
             <div className="flex items-center">
               <SparklesIcon className="h-8 w-8 text-white mr-2" />
-              <h1 className="text-xl font-bold text-white">CryptoBot</h1>
+              <h1 className="text-xl font-bold text-white">TradeShare</h1>
             </div>
             <button
               onClick={() => setSidebarOpen(false)}
@@ -90,7 +133,11 @@ function Layout({ children }) {
           {/* User Profile Section */}
           {(isAuthenticated || isDemoMode) && (
             <div className="px-6 py-4 border-b border-secondary-600">
-              <div className="flex items-center">
+              <Link
+                to="/account"
+                className="flex items-center hover:bg-secondary-700 rounded-lg p-2 -m-2 transition-colors duration-200"
+                onClick={() => setSidebarOpen(false)}
+              >
                 <div className="flex-shrink-0">
                   <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-600 to-sage-600 flex items-center justify-center">
                     <UserIcon className="h-6 w-6 text-white" />
@@ -104,7 +151,7 @@ function Layout({ children }) {
                     {isDemoMode && <Badge variant="warning" size="sm">Demo Mode</Badge>}
                   </p>
                 </div>
-              </div>
+              </Link>
             </div>
           )}
 
@@ -155,12 +202,16 @@ function Layout({ children }) {
         <div className="flex flex-col flex-grow bg-secondary-800 border-r border-secondary-700">
           <div className="flex h-16 items-center px-6 bg-gradient-to-r from-primary-600 to-sage-600">
             <SparklesIcon className="h-8 w-8 text-white mr-2" />
-            <h1 className="text-xl font-bold text-white">CryptoBot</h1>
+            <h1 className="text-xl font-bold text-white">TradeShare</h1>
           </div>
           {/* User Profile Section */}
           {(isAuthenticated || isDemoMode) && (
             <div className="px-6 py-4 border-b border-secondary-600">
-              <div className="flex items-center">
+              <Link
+                to="/account"
+                className="flex items-center hover:bg-secondary-700 rounded-lg p-2 -m-2 transition-colors duration-200"
+                onClick={() => setSidebarOpen(false)}
+              >
                 <div className="flex-shrink-0">
                   <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-600 to-sage-600 flex items-center justify-center">
                     <UserIcon className="h-6 w-6 text-white" />
@@ -174,7 +225,7 @@ function Layout({ children }) {
                     {isDemoMode && <Badge variant="warning" size="sm">Demo Mode</Badge>}
                   </p>
                 </div>
-              </div>
+              </Link>
             </div>
           )}
 
@@ -254,12 +305,14 @@ function Layout({ children }) {
                     <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-danger-500 ring-2 ring-secondary-800" />
                   </button>
                   <div className="flex items-center space-x-2">
-                    <div className="h-2 w-2 bg-success-400 rounded-full animate-pulse"></div>
-                    <span className="text-sm text-neutral-300">Live</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
                     <span className="text-sm text-neutral-300">
                       {isDemoMode ? 'Demo Mode' : (user?.first_name || user?.email)}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2 px-3 py-1 bg-secondary-700 rounded-lg border border-secondary-600">
+                    <div className={`h-3 w-3 rounded-full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
+                    <span className={`text-sm font-medium ${isConnected ? 'text-green-400' : 'text-red-400'}`}>
+                      {isConnected ? 'Live' : 'Disconnected'}
                     </span>
                   </div>
                 </div>
@@ -277,7 +330,9 @@ function Layout({ children }) {
 
         {/* Page content */}
         <main className="p-4 lg:p-8">
-          {children}
+          <LiveDataContext.Provider value={{ isConnected }}>
+            {children}
+          </LiveDataContext.Provider>
         </main>
       </div>
 

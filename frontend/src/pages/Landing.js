@@ -299,33 +299,33 @@ const Landing = () => {
             <div>
               <h3 className="text-white font-semibold mb-4">Product</h3>
               <ul className="space-y-2">
-                <li><a href="#" className="hover:text-white">Features</a></li>
-                <li><a href="#" className="hover:text-white">Pricing</a></li>
-                <li><a href="#" className="hover:text-white">Strategies</a></li>
+                <li><button className="hover:text-white text-left">Features</button></li>
+                <li><button className="hover:text-white text-left">Pricing</button></li>
+                <li><button className="hover:text-white text-left">Strategies</button></li>
               </ul>
             </div>
             <div>
               <h3 className="text-white font-semibold mb-4">Company</h3>
               <ul className="space-y-2">
-                <li><a href="#" className="hover:text-white">About</a></li>
-                <li><a href="#" className="hover:text-white">Blog</a></li>
-                <li><a href="#" className="hover:text-white">Careers</a></li>
+                <li><button className="hover:text-white text-left">About</button></li>
+                <li><button className="hover:text-white text-left">Blog</button></li>
+                <li><button className="hover:text-white text-left">Careers</button></li>
               </ul>
             </div>
             <div>
               <h3 className="text-white font-semibold mb-4">Support</h3>
               <ul className="space-y-2">
-                <li><a href="#" className="hover:text-white">Documentation</a></li>
-                <li><a href="#" className="hover:text-white">API Reference</a></li>
-                <li><a href="#" className="hover:text-white">Contact</a></li>
+                <li><button className="hover:text-white text-left">Documentation</button></li>
+                <li><button className="hover:text-white text-left">API Reference</button></li>
+                <li><button className="hover:text-white text-left">Contact</button></li>
               </ul>
             </div>
             <div>
               <h3 className="text-white font-semibold mb-4">Legal</h3>
               <ul className="space-y-2">
-                <li><a href="#" className="hover:text-white">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-white">Terms of Service</a></li>
-                <li><a href="#" className="hover:text-white">Security</a></li>
+                <li><button className="hover:text-white text-left">Privacy Policy</button></li>
+                <li><button className="hover:text-white text-left">Terms of Service</button></li>
+                <li><button className="hover:text-white text-left">Security</button></li>
               </ul>
             </div>
           </div>
