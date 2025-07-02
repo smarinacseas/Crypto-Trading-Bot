@@ -102,15 +102,33 @@ function Indicators() {
     plugins: {
       legend: {
         position: 'top',
+        labels: {
+          color: 'rgb(212, 212, 216)', // neutral-300
+        },
       },
       title: {
         display: true,
         text: 'SMA Indicator - BTC/USD',
+        color: 'rgb(212, 212, 216)', // neutral-300
       },
     },
     scales: {
+      x: {
+        ticks: {
+          color: 'rgb(163, 163, 163)', // neutral-400
+        },
+        grid: {
+          color: 'rgba(163, 163, 163, 0.1)',
+        },
+      },
       y: {
         beginAtZero: false,
+        ticks: {
+          color: 'rgb(163, 163, 163)', // neutral-400
+        },
+        grid: {
+          color: 'rgba(163, 163, 163, 0.1)',
+        },
       },
     },
   };
@@ -151,13 +169,13 @@ function Indicators() {
   const getSignalColor = (signal) => {
     switch (signal) {
       case 'BUY':
-        return 'bg-green-100 text-green-800';
+        return 'bg-success-500/20 text-success-300 border border-success-500/30';
       case 'SELL':
-        return 'bg-red-100 text-red-800';
+        return 'bg-danger-500/20 text-danger-300 border border-danger-500/30';
       case 'NEUTRAL':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-neutral-500/20 text-neutral-300 border border-neutral-500/30';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-neutral-500/20 text-neutral-300 border border-neutral-500/30';
     }
   };
 
@@ -170,18 +188,18 @@ function Indicators() {
   return (
     <div className="space-y-6">
       {/* Add New Indicator */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold mb-4">Add New Indicator</h3>
+      <div className="card">
+        <h3 className="text-lg font-semibold text-neutral-100 mb-4">Add New Indicator</h3>
         
         <form onSubmit={handleFormSubmit} className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-neutral-300 mb-1">
               Indicator Type
             </label>
             <select
               value={newIndicatorForm.type}
               onChange={(e) => setNewIndicatorForm({...newIndicatorForm, type: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-3 py-2 bg-secondary-700 border border-secondary-600 rounded-lg text-neutral-100 focus:ring-primary-500 focus:border-primary-500"
             >
               <option value="SMA">Simple Moving Average</option>
               <option value="RSI">RSI</option>
@@ -192,13 +210,13 @@ function Indicators() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-neutral-300 mb-1">
               Symbol
             </label>
             <select
               value={newIndicatorForm.symbol}
               onChange={(e) => setNewIndicatorForm({...newIndicatorForm, symbol: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-3 py-2 bg-secondary-700 border border-secondary-600 rounded-lg text-neutral-100 focus:ring-primary-500 focus:border-primary-500"
             >
               <option value="BTC/USD">BTC/USD</option>
               <option value="ETH/USD">ETH/USD</option>
@@ -207,13 +225,13 @@ function Indicators() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-neutral-300 mb-1">
               Timeframe
             </label>
             <select
               value={newIndicatorForm.timeframe}
               onChange={(e) => setNewIndicatorForm({...newIndicatorForm, timeframe: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-3 py-2 bg-secondary-700 border border-secondary-600 rounded-lg text-neutral-100 focus:ring-primary-500 focus:border-primary-500"
             >
               <option value="1m">1 Minute</option>
               <option value="5m">5 Minutes</option>
@@ -226,7 +244,7 @@ function Indicators() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-neutral-300 mb-1">
               Period
             </label>
             <input
@@ -235,7 +253,7 @@ function Indicators() {
               onChange={(e) => setNewIndicatorForm({...newIndicatorForm, period: parseInt(e.target.value)})}
               min="1"
               max="200"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-3 py-2 bg-secondary-700 border border-secondary-600 rounded-lg text-neutral-100 focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
 
@@ -251,58 +269,58 @@ function Indicators() {
       </div>
 
       {/* Active Indicators */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold mb-4">Active Indicators</h3>
+      <div className="card">
+        <h3 className="text-lg font-semibold text-neutral-100 mb-4">Active Indicators</h3>
         
         <div className="space-y-4">
           {activeIndicators.map((indicator) => (
-            <div key={indicator.id} className="border border-gray-200 rounded-lg p-4">
+            <div key={indicator.id} className="border border-secondary-600 rounded-lg p-4 bg-secondary-700">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <h4 className="font-semibold">{indicator.name}</h4>
-                  <p className="text-sm text-gray-600">
+                  <h4 className="font-semibold text-neutral-100">{indicator.name}</h4>
+                  <p className="text-sm text-neutral-400">
                     {indicator.symbol} • {indicator.timeframe} • Period: {indicator.period}
                   </p>
                 </div>
                 <div className="flex items-center space-x-2">
                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                    indicator.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                    indicator.status === 'ACTIVE' ? 'bg-success-500/20 text-success-300 border border-success-500/30' : 'bg-neutral-500/20 text-neutral-300 border border-neutral-500/30'
                   }`}>
                     {indicator.status}
                   </span>
                   <button
                     onClick={() => runIndicator(indicator.id)}
-                    className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                    className="p-2 text-primary-400 hover:bg-primary-500/20 rounded"
                   >
                     <PlayIcon className="w-4 h-4" />
                   </button>
-                  <button className="p-2 text-gray-600 hover:bg-gray-50 rounded">
+                  <button className="p-2 text-neutral-400 hover:bg-neutral-500/20 rounded">
                     <CogIcon className="w-4 h-4" />
                   </button>
-                  <button className="p-2 text-gray-600 hover:bg-gray-50 rounded">
+                  <button className="p-2 text-neutral-400 hover:bg-neutral-500/20 rounded">
                     <EyeIcon className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Last Value</p>
-                  <p className="text-lg font-semibold">{indicator.lastValue.toFixed(2)}</p>
+                <div className="text-center p-3 bg-secondary-600 rounded-lg border border-secondary-500">
+                  <p className="text-sm text-neutral-400">Last Value</p>
+                  <p className="text-lg font-semibold text-neutral-100">{indicator.lastValue.toFixed(2)}</p>
                 </div>
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Signal</p>
+                <div className="text-center p-3 bg-secondary-600 rounded-lg border border-secondary-500">
+                  <p className="text-sm text-neutral-400">Signal</p>
                   <span className={`inline-flex px-2 py-1 text-sm font-semibold rounded-full ${getSignalColor(indicator.signal)}`}>
                     {indicator.signal}
                   </span>
                 </div>
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Confidence</p>
-                  <p className="text-lg font-semibold">{indicator.confidence}%</p>
+                <div className="text-center p-3 bg-secondary-600 rounded-lg border border-secondary-500">
+                  <p className="text-sm text-neutral-400">Confidence</p>
+                  <p className="text-lg font-semibold text-neutral-100">{indicator.confidence}%</p>
                 </div>
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Last Update</p>
-                  <p className="text-sm">2 min ago</p>
+                <div className="text-center p-3 bg-secondary-600 rounded-lg border border-secondary-500">
+                  <p className="text-sm text-neutral-400">Last Update</p>
+                  <p className="text-sm text-neutral-300">2 min ago</p>
                 </div>
               </div>
             </div>
@@ -311,12 +329,12 @@ function Indicators() {
       </div>
 
       {/* SMA Chart Visualization */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="card">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">SMA Indicator Visualization</h3>
+          <h3 className="text-lg font-semibold text-neutral-100">SMA Indicator Visualization</h3>
           <div className="flex items-center space-x-2">
-            <ChartBarIcon className="w-5 h-5 text-primary-600" />
-            <span className="text-sm text-gray-600">Live Chart</span>
+            <ChartBarIcon className="w-5 h-5 text-primary-400" />
+            <span className="text-sm text-neutral-300">Live Chart</span>
           </div>
         </div>
         
@@ -330,13 +348,13 @@ function Indicators() {
         <div className="stat-card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Active Indicators</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm font-medium text-neutral-400">Active Indicators</p>
+              <p className="text-2xl font-bold text-neutral-100">
                 {activeIndicators.filter(i => i.status === 'ACTIVE').length}
               </p>
             </div>
-            <div className="p-3 bg-green-50 rounded-lg">
-              <ChartBarIcon className="w-6 h-6 text-green-600" />
+            <div className="p-3 bg-success-500/20 rounded-lg border border-success-500/30">
+              <ChartBarIcon className="w-6 h-6 text-success-400" />
             </div>
           </div>
         </div>
@@ -344,13 +362,13 @@ function Indicators() {
         <div className="stat-card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Buy Signals</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm font-medium text-neutral-400">Buy Signals</p>
+              <p className="text-2xl font-bold text-neutral-100">
                 {activeIndicators.filter(i => i.signal === 'BUY').length}
               </p>
             </div>
-            <div className="p-3 bg-green-50 rounded-lg">
-              <PlayIcon className="w-6 h-6 text-green-600" />
+            <div className="p-3 bg-success-500/20 rounded-lg border border-success-500/30">
+              <PlayIcon className="w-6 h-6 text-success-400" />
             </div>
           </div>
         </div>
@@ -358,13 +376,13 @@ function Indicators() {
         <div className="stat-card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Avg Confidence</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm font-medium text-neutral-400">Avg Confidence</p>
+              <p className="text-2xl font-bold text-neutral-100">
                 {Math.round(activeIndicators.reduce((sum, i) => sum + i.confidence, 0) / activeIndicators.length)}%
               </p>
             </div>
-            <div className="p-3 bg-blue-50 rounded-lg">
-              <CogIcon className="w-6 h-6 text-blue-600" />
+            <div className="p-3 bg-primary-600/20 rounded-lg border border-primary-600/30">
+              <CogIcon className="w-6 h-6 text-primary-400" />
             </div>
           </div>
         </div>

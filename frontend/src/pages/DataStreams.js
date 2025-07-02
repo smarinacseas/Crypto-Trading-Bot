@@ -149,29 +149,29 @@ function DataStreams() {
   const getStatusColor = (status) => {
     switch (status) {
       case 'RUNNING':
-        return 'bg-green-100 text-green-800';
+        return 'bg-success-500/20 text-success-300 border border-success-500/30';
       case 'PAUSED':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-warning-500/20 text-warning-300 border border-warning-500/30';
       case 'STOPPED':
-        return 'bg-red-100 text-red-800';
+        return 'bg-danger-500/20 text-danger-300 border border-danger-500/30';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-neutral-500/20 text-neutral-300 border border-neutral-500/30';
     }
   };
 
   return (
     <div className="space-y-6">
       {/* Stream Controls */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold mb-4">Data Stream Management</h3>
+      <div className="card">
+        <h3 className="text-lg font-semibold text-neutral-100 mb-4">Data Stream Management</h3>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {streams.map((stream) => (
-            <div key={stream.id} className="border border-gray-200 rounded-lg p-4">
+            <div key={stream.id} className="border border-secondary-600 rounded-lg p-4 bg-secondary-700">
               <div className="flex justify-between items-start mb-3">
                 <div>
-                  <h4 className="font-semibold">{stream.name}</h4>
-                  <p className="text-sm text-gray-600">{stream.symbol}</p>
+                  <h4 className="font-semibold text-neutral-100">{stream.name}</h4>
+                  <p className="text-sm text-neutral-400">{stream.symbol}</p>
                 </div>
                 <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(stream.status)}`}>
                   {stream.status}
@@ -180,16 +180,16 @@ function DataStreams() {
 
               <div className="space-y-2 mb-4">
                 <div className="text-sm">
-                  <span className="text-gray-600">Endpoint:</span>
-                  <span className="ml-2 font-mono text-xs break-all">{stream.endpoint}</span>
+                  <span className="text-neutral-400">Endpoint:</span>
+                  <span className="ml-2 font-mono text-xs break-all text-neutral-300">{stream.endpoint}</span>
                 </div>
                 <div className="text-sm">
-                  <span className="text-gray-600">Messages:</span>
-                  <span className="ml-2 font-semibold">{stream.messagesReceived.toLocaleString()}</span>
+                  <span className="text-neutral-400">Messages:</span>
+                  <span className="ml-2 font-semibold text-neutral-100">{stream.messagesReceived.toLocaleString()}</span>
                 </div>
                 <div className="text-sm">
-                  <span className="text-gray-600">Last Update:</span>
-                  <span className="ml-2">{stream.lastMessage}</span>
+                  <span className="text-neutral-400">Last Update:</span>
+                  <span className="ml-2 text-neutral-300">{stream.lastMessage}</span>
                 </div>
               </div>
 
@@ -197,7 +197,7 @@ function DataStreams() {
                 {stream.status === 'RUNNING' ? (
                   <button
                     onClick={() => toggleStream(stream.id, 'PAUSED')}
-                    className="flex items-center px-3 py-1 bg-yellow-100 text-yellow-800 rounded-md hover:bg-yellow-200"
+                    className="flex items-center px-3 py-1 bg-warning-500/20 text-warning-300 border border-warning-500/30 rounded-md hover:bg-warning-500/30"
                   >
                     <PauseIcon className="w-4 h-4 mr-1" />
                     Pause
@@ -205,7 +205,7 @@ function DataStreams() {
                 ) : (
                   <button
                     onClick={() => toggleStream(stream.id, 'RUNNING')}
-                    className="flex items-center px-3 py-1 bg-green-100 text-green-800 rounded-md hover:bg-green-200"
+                    className="flex items-center px-3 py-1 bg-success-500/20 text-success-300 border border-success-500/30 rounded-md hover:bg-success-500/30"
                   >
                     <PlayIcon className="w-4 h-4 mr-1" />
                     Start
@@ -213,7 +213,7 @@ function DataStreams() {
                 )}
                 <button
                   onClick={() => toggleStream(stream.id, 'STOPPED')}
-                  className="flex items-center px-3 py-1 bg-red-100 text-red-800 rounded-md hover:bg-red-200"
+                  className="flex items-center px-3 py-1 bg-danger-500/20 text-danger-300 border border-danger-500/30 rounded-md hover:bg-danger-500/30"
                 >
                   <StopIcon className="w-4 h-4 mr-1" />
                   Stop
@@ -225,31 +225,29 @@ function DataStreams() {
       </div>
 
       {/* Live Message Feed */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <SignalIcon className="w-5 h-5 text-primary-600 mr-2" />
-              <h3 className="text-lg font-semibold">Live Message Feed</h3>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="h-2 w-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span className="text-sm text-gray-600">Live</span>
-            </div>
+      <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center">
+            <SignalIcon className="w-5 h-5 text-primary-400 mr-2" />
+            <h3 className="text-lg font-semibold text-neutral-100">Live Message Feed</h3>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="h-2 w-2 bg-success-400 rounded-full animate-pulse"></div>
+            <span className="text-sm text-neutral-300">Live</span>
           </div>
         </div>
 
-        <div className="h-96 overflow-y-auto">
+        <div className="h-96 overflow-y-auto bg-secondary-700 rounded-lg p-4 border border-secondary-600 custom-scrollbar">
           <div className="space-y-1">
             {liveMessages.map((message) => (
-              <div key={message.id} className="flex items-center px-6 py-2 hover:bg-gray-50 text-sm font-mono">
-                <span className="text-gray-500 w-20">{message.timestamp}</span>
-                <span className="text-blue-600 w-32 truncate">{message.stream}</span>
-                <span className="text-gray-700 w-20">{message.symbol}</span>
-                <span className="text-gray-900 w-24 text-right">${message.price}</span>
-                <span className="text-gray-600 w-20 text-right">{message.quantity}</span>
+              <div key={message.id} className="flex items-center px-4 py-2 hover:bg-secondary-600 text-sm font-mono rounded">
+                <span className="text-neutral-400 w-20">{message.timestamp}</span>
+                <span className="text-primary-400 w-32 truncate">{message.stream}</span>
+                <span className="text-neutral-300 w-20">{message.symbol}</span>
+                <span className="text-neutral-100 w-24 text-right">${message.price}</span>
+                <span className="text-neutral-300 w-20 text-right">{message.quantity}</span>
                 <span className={`w-16 text-center ${
-                  message.side === 'BUY' ? 'text-green-600' : 'text-red-600'
+                  message.side === 'BUY' ? 'text-success-400' : 'text-danger-400'
                 }`}>
                   {message.side === 'BUY' ? (
                     <ArrowTrendingUpIcon className="w-4 h-4 inline" />
@@ -258,7 +256,7 @@ function DataStreams() {
                   )}
                   {message.side}
                 </span>
-                <span className="text-gray-500 text-right flex-1">#{message.tradeId}</span>
+                <span className="text-neutral-400 text-right flex-1">#{message.tradeId}</span>
               </div>
             ))}
           </div>
@@ -270,13 +268,13 @@ function DataStreams() {
         <div className="stat-card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Messages</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm font-medium text-neutral-400">Total Messages</p>
+              <p className="text-2xl font-bold text-neutral-100">
                 {streams.reduce((sum, stream) => sum + stream.messagesReceived, 0).toLocaleString()}
               </p>
             </div>
-            <div className="p-3 bg-blue-50 rounded-lg">
-              <SignalIcon className="w-6 h-6 text-blue-600" />
+            <div className="p-3 bg-primary-600/20 rounded-lg border border-primary-600/30">
+              <SignalIcon className="w-6 h-6 text-primary-400" />
             </div>
           </div>
         </div>
@@ -284,13 +282,13 @@ function DataStreams() {
         <div className="stat-card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Active Streams</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm font-medium text-neutral-400">Active Streams</p>
+              <p className="text-2xl font-bold text-neutral-100">
                 {streams.filter(stream => stream.status === 'RUNNING').length}
               </p>
             </div>
-            <div className="p-3 bg-green-50 rounded-lg">
-              <PlayIcon className="w-6 h-6 text-green-600" />
+            <div className="p-3 bg-success-500/20 rounded-lg border border-success-500/30">
+              <PlayIcon className="w-6 h-6 text-success-400" />
             </div>
           </div>
         </div>
@@ -298,11 +296,11 @@ function DataStreams() {
         <div className="stat-card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Data Rate</p>
-              <p className="text-2xl font-bold text-gray-900">~2.4/sec</p>
+              <p className="text-sm font-medium text-neutral-400">Data Rate</p>
+              <p className="text-2xl font-bold text-neutral-100">~2.4/sec</p>
             </div>
-            <div className="p-3 bg-purple-50 rounded-lg">
-              <ArrowTrendingUpIcon className="w-6 h-6 text-purple-600" />
+            <div className="p-3 bg-accent-500/20 rounded-lg border border-accent-500/30">
+              <ArrowTrendingUpIcon className="w-6 h-6 text-accent-400" />
             </div>
           </div>
         </div>
