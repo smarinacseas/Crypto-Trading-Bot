@@ -10,6 +10,7 @@ import Strategies from './pages/Strategies';
 import Backtesting from './pages/Backtesting';
 import PaperTrading from './pages/PaperTrading';
 import Account from './pages/Account';
+import ScrollToTop from './components/ScrollToTop';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -19,7 +20,15 @@ function App() {
     // Check if user is authenticated
     const token = localStorage.getItem('auth_token');
     const demoMode = localStorage.getItem('demo_mode');
-    setIsAuthenticated(!!token || !!demoMode);
+    
+    // If user has auth token, clear demo mode
+    if (token) {
+      localStorage.removeItem('demo_mode');
+      setIsAuthenticated(true);
+    } else {
+      setIsAuthenticated(!!demoMode);
+    }
+    
     setIsLoading(false);
   }, []);
 
@@ -36,6 +45,7 @@ function App() {
 
   return (
     <Router>
+      <ScrollToTop />
       <Routes>
         {/* Public route */}
         <Route path="/" element={

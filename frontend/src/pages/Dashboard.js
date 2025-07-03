@@ -19,18 +19,24 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import { SymbolOverview } from 'react-ts-tradingview-widgets';
 import { LiveDataContext } from '../components/Layout';
+import TradingViewWidget from '../components/TradingViewWidget';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card.jsx';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
+// Register Chart.js components with error handling
+try {
+  ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    Title,
+    Tooltip,
+    Legend
+  );
+} catch (error) {
+  console.error('Error registering Chart.js components:', error);
+}
 
 function Dashboard() {
   const [portfolioStats, setPortfolioStats] = useState({
@@ -44,8 +50,6 @@ function Dashboard() {
 
   const [recentPositions, setRecentPositions] = useState([]);
   const [liveMessages, setLiveMessages] = useState([]);
-  const [watchlistSymbols] = useState(['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'ADAUSDT']);
-  const [watchlistErrors, setWatchlistErrors] = useState({});
   const { isConnected } = useContext(LiveDataContext);
 
   const [pnlChart] = useState({
@@ -74,64 +78,92 @@ function Dashboard() {
         const data = await response.json();
         setPortfolioStats(data);
         setRecentPositions(data.recent_positions || []);
+      } else {
+        console.warn('Dashboard stats API returned non-OK status:', response.status);
       }
     } catch (error) {
       console.error('Error fetching portfolio stats:', error);
+      // Don't throw the error, just log it to prevent crashes
     }
   };
 
   const connectWebSocket = useCallback(() => {
-    const ws = new WebSocket('ws://localhost:8000/ws/ws');
+    let ws = null;
     
-    ws.onopen = () => {
-      console.log('WebSocket connected');
+    try {
+      ws = new WebSocket('ws://localhost:8000/ws/ws');
       
-      // Start receiving live trade data
-      ws.send(JSON.stringify({
-        action: 'start_stream',
-        stream_type: 'standard',
-        symbol: 'btcusdt'
-      }));
-    };
+      ws.onopen = () => {
+        console.log('WebSocket connected');
+        
+        // Start receiving live trade data
+        try {
+          ws.send(JSON.stringify({
+            action: 'start_stream',
+            stream_type: 'standard',
+            symbol: 'btcusdt'
+          }));
+        } catch (error) {
+          console.error('Error sending WebSocket message:', error);
+        }
+      };
 
-    ws.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      
-      if (message.type === 'standard_trade') {
-        setLiveMessages(prev => [message, ...prev.slice(0, 49)]);
-      }
-    };
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          
+          if (message.type === 'standard_trade') {
+            setLiveMessages(prev => [message, ...prev.slice(0, 49)]);
+          }
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
+      };
 
-    ws.onclose = () => {
-      console.log('WebSocket disconnected');
-      
-      // Attempt to reconnect after 3 seconds
-      setTimeout(connectWebSocket, 3000);
-    };
+      ws.onclose = () => {
+        console.log('WebSocket disconnected');
+        
+        // Attempt to reconnect after 3 seconds
+        setTimeout(() => {
+          try {
+            connectWebSocket();
+          } catch (error) {
+            console.error('Error reconnecting WebSocket:', error);
+          }
+        }, 3000);
+      };
 
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        // Don't throw the error to prevent crashes
+      };
+
+    } catch (error) {
+      console.error('Error creating WebSocket connection:', error);
+    }
 
     return ws; // Return the websocket instance
   }, []); // Empty dependency array to prevent recreation
 
-  const handleWatchlistError = (symbol, error) => {
-    setWatchlistErrors(prev => ({
-      ...prev,
-      [symbol]: error
-    }));
-  };
-
-  const clearWatchlistError = (symbol) => {
-    setWatchlistErrors(prev => {
-      const newErrors = { ...prev };
-      delete newErrors[symbol];
-      return newErrors;
-    });
-  };
 
   useEffect(() => {
+    // Add global error handler for unhandled errors
+    const handleGlobalError = (event) => {
+      console.error('Global error caught:', event.error);
+      // Prevent the error from crashing the app
+      event.preventDefault();
+    };
+
+    const handleUnhandledRejection = (event) => {
+      console.error('Unhandled promise rejection:', event.reason);
+      // Prevent the error from crashing the app
+      event.preventDefault();
+    };
+
+    // Add global error handlers
+    window.addEventListener('error', handleGlobalError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
     // Fetch portfolio stats
     fetchPortfolioStats();
     
@@ -139,8 +171,16 @@ function Dashboard() {
     const ws = connectWebSocket();
 
     return () => {
+      // Remove global error handlers
+      window.removeEventListener('error', handleGlobalError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      
       if (ws) {
-        ws.close();
+        try {
+          ws.close();
+        } catch (error) {
+          console.error('Error closing WebSocket:', error);
+        }
       }
     };
   }, [connectWebSocket]); // Only depend on connectWebSocket
@@ -214,6 +254,14 @@ function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Advanced Trading Chart - Moved to top */}
+      <div className="card">
+        <h3 className="text-lg font-semibold text-neutral-100 mb-4">Market Analysis</h3>
+        <div className="w-full" style={{ height: "600px" }}>
+          <TradingViewWidget />
+        </div>
+      </div>
+
       {/* Portfolio Overview Banner */}
       <div className="bg-gradient-to-r from-primary-600 to-sage-600 rounded-xl p-6 text-white shadow-xl border border-primary-500/30">
         <div className="flex items-center justify-between">
@@ -239,38 +287,49 @@ function Dashboard() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statCards.map((stat) => (
-          <div key={stat.name} className="stat-card">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-neutral-400">{stat.name}</p>
-                <p className="text-2xl font-bold text-neutral-100">{stat.value}</p>
-                <p className={`text-sm ${
-                  stat.changeType === 'positive' ? 'text-success-400' : 
-                  stat.changeType === 'negative' ? 'text-danger-400' : 'text-neutral-400'
-                }`}>
-                  {stat.change}
-                </p>
+          <Card key={stat.name} className="hover:shadow-xl hover:border-secondary-600 transition-all duration-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-neutral-400">{stat.name}</p>
+                  <p className="text-2xl font-bold text-neutral-100">{stat.value}</p>
+                  <p className={`text-sm ${
+                    stat.changeType === 'positive' ? 'text-success-400' : 
+                    stat.changeType === 'negative' ? 'text-danger-400' : 'text-neutral-400'
+                  }`}>
+                    {stat.change}
+                  </p>
+                </div>
+                <div className="p-3 bg-primary-600/20 rounded-lg border border-primary-600/30">
+                  <stat.icon className="w-6 h-6 text-primary-400" />
+                </div>
               </div>
-              <div className="p-3 bg-primary-600/20 rounded-lg border border-primary-600/30">
-                <stat.icon className="w-6 h-6 text-primary-400" />
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
       {/* Portfolio Analytics and Recent Positions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Portfolio Value Chart */}
-        <div className="card">
-          <h3 className="text-lg font-semibold text-neutral-100 mb-4">Portfolio Performance</h3>
-          <Line data={pnlChart} options={chartOptions} />
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-neutral-100">Portfolio Performance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div style={{ height: "300px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Line data={pnlChart} options={chartOptions} />
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Recent Positions */}
-        <div className="card">
-          <h3 className="text-lg font-semibold text-neutral-100 mb-4">Recent Positions</h3>
-          <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-neutral-100">Recent Positions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
             {recentPositions.length > 0 ? recentPositions.map((position, index) => (
               <div key={index} className="flex items-center justify-between p-3 bg-secondary-700 rounded-lg border border-secondary-600">
                 <div className="flex items-center space-x-3">
@@ -303,19 +362,23 @@ function Dashboard() {
                 <p className="text-sm">Start trading to see your positions here</p>
               </div>
             )}
-          </div>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Live Market Data Feed */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-neutral-100">Live Market Data</h3>
-          <div className="flex items-center space-x-2">
-            <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-success-400 animate-pulse' : 'bg-danger-400'}`}></div>
-            <span className="text-sm text-neutral-300">{isConnected ? 'Live' : 'Disconnected'}</span>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg font-semibold text-neutral-100">Live Market Data</CardTitle>
+            <div className="flex items-center space-x-2">
+              <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-success-400 animate-pulse' : 'bg-danger-400'}`}></div>
+              <span className="text-sm text-neutral-300">{isConnected ? 'Live' : 'Disconnected'}</span>
+            </div>
           </div>
-        </div>
+        </CardHeader>
+        <CardContent>
         
         <div className="h-48 overflow-y-auto bg-secondary-700 rounded-lg p-4 border border-secondary-600 custom-scrollbar">
           <div className="space-y-1 font-mono text-sm">
@@ -337,66 +400,26 @@ function Dashboard() {
             )}
           </div>
         </div>
-      </div>
-
-      {/* Crypto Watchlist */}
-      <div className="card">
-        <h3 className="text-lg font-semibold text-neutral-100 mb-4">Watchlist</h3>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {watchlistSymbols.map((symbol) => (
-            <div key={symbol} className="bg-secondary-700 rounded-lg border border-secondary-600 overflow-hidden">
-              <div className="p-3 border-b border-secondary-600">
-                <h4 className="text-sm font-medium text-neutral-200">{symbol}</h4>
-              </div>
-              <div className="h-64">
-                {watchlistErrors[symbol] ? (
-                  <div className="flex items-center justify-center h-full text-center p-4">
-                    <div>
-                      <p className="text-neutral-400 text-sm mb-2">Failed to load chart</p>
-                      <button 
-                        onClick={() => clearWatchlistError(symbol)}
-                        className="text-primary-400 hover:text-primary-300 text-xs underline"
-                      >
-                        Retry
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <SymbolOverview
-                    symbols={[
-                      [
-                        symbol,
-                        symbol,
-                      ],
-                    ]}
-                    chartOnly={false}
-                    width="100%"
-                    height={256}
-                    colorTheme="dark"
-                    isTransparent={true}
-                    locale="en"
-                    onError={() => handleWatchlistError(symbol, 'Widget failed to load')}
-                  />
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Quick Actions */}
-      <div className="card">
-        <h3 className="text-lg font-semibold text-neutral-100 mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <button className="btn-primary flex items-center justify-center">
-            <PlusIcon className="w-4 h-4 mr-2" />
-            New Portfolio
-          </button>
-          <button className="btn-secondary">Connect Exchange</button>
-          <button className="btn-secondary">View Strategies</button>
-          <button className="btn-secondary">Analytics</button>
-        </div>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-neutral-100">Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <button className="btn-primary flex items-center justify-center">
+              <PlusIcon className="w-4 h-4 mr-2" />
+              New Portfolio
+            </button>
+            <button className="btn-secondary">Connect Exchange</button>
+            <button className="btn-secondary">View Strategies</button>
+            <button className="btn-secondary">Analytics</button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

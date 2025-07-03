@@ -5,10 +5,24 @@ module.exports = {
   ],
   darkMode: 'class',
   theme: {
+    container: {
+      center: true,
+      padding: "2rem",
+      screens: {
+        "2xl": "1400px",
+      },
+    },
     extend: {
       colors: {
-        // Custom dark theme palette
+        // shadcn/ui variables
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
         primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
           50: '#e8f4f8',
           100: '#d1e9f1',
           200: '#a3d3e3',
@@ -21,6 +35,8 @@ module.exports = {
           900: '#051318',
         },
         secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
           50: '#e9ecef',
           100: '#d3d9df',
           200: '#a7b3bf',
@@ -32,7 +48,17 @@ module.exports = {
           800: '#0e1a28',
           900: '#0b151f',
         },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
         accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
           50: '#f2f2f3',
           100: '#e5e6e7',
           200: '#cbcdcf',
@@ -43,6 +69,14 @@ module.exports = {
           700: '#25292c',
           800: '#191c1f',
           900: '#0d0f11',
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
         },
         neutral: {
           50: '#f7f7f6',
@@ -85,6 +119,11 @@ module.exports = {
           500: '#3b82f6',
           600: '#2563eb',
         }
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
         'inter': ['Inter', 'sans-serif'],

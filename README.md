@@ -42,7 +42,7 @@ conda create -n <env_name>
 - Activate the environment
 
 ```
-conda activate <env_name>
+conda [--no-plugins] activate <env_name>
 ```
 
 - Install the dependencies

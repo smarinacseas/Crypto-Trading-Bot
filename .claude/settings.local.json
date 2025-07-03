@@ -9,7 +9,11 @@
       "Bash(rm:*)",
       "Bash(rg:*)",
       "Bash(gh issue list:*)",
-      "Bash(gh issue view:*)"
+      "Bash(gh issue view:*)",
+      "WebFetch(domain:www.tradingview.com)",
+      "Bash(npx:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": []
   }

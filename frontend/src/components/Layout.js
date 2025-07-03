@@ -1,5 +1,5 @@
 import React, { useState, useEffect, createContext } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   ChartBarIcon,
   CurrencyDollarIcon,
@@ -15,9 +15,11 @@ import {
   FireIcon,
   BeakerIcon,
   PlayIcon,
+  ChevronDownIcon,
 } from '@heroicons/react/24/outline';
-import { Badge } from './ui';
+import { Badge } from './ui/badge.jsx';
 import AuthModal from './AuthModal';
+import ErrorBoundary from './ErrorBoundary';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: ChartBarIcon },
@@ -40,12 +42,15 @@ function Layout({ children }) {
   const [user, setUser] = useState(null);
   const location = useLocation();
   const [isConnected, setIsConnected] = useState(false);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
 
   useEffect(() => {
     // Check if user is authenticated
     const token = localStorage.getItem('auth_token');
     if (token) {
       setIsAuthenticated(true);
+      // Clear demo mode if user is authenticated
+      localStorage.removeItem('demo_mode');
       fetchUserProfile();
     }
   }, []);
@@ -68,15 +73,20 @@ function Layout({ children }) {
     }
   };
 
-  const navigate = useNavigate();
-  const isDemoMode = localStorage.getItem('demo_mode') === 'true';
+  // Only consider demo mode if user is NOT authenticated
+  const isDemoMode = !isAuthenticated && localStorage.getItem('demo_mode') === 'true';
 
   const handleLogout = () => {
+    // Clear all authentication data
     localStorage.removeItem('auth_token');
     localStorage.removeItem('demo_mode');
+    
+    // Reset state
     setIsAuthenticated(false);
     setUser(null);
-    navigate('/');
+    
+    // Force navigation to landing page
+    window.location.href = '/';
   };
 
   // WebSocket connection for live data status
@@ -119,10 +129,14 @@ function Layout({ children }) {
         <div className="fixed inset-0 bg-secondary-900 bg-opacity-75 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
         <div className="fixed inset-y-0 left-0 flex w-72 flex-col bg-secondary-800 border-r border-secondary-700">
           <div className="flex h-16 items-center justify-between px-6 bg-gradient-to-r from-primary-600 to-sage-600">
-            <div className="flex items-center">
+            <Link 
+              to="/dashboard" 
+              className="flex items-center hover:opacity-80 transition-opacity duration-200"
+              onClick={() => setSidebarOpen(false)}
+            >
               <SparklesIcon className="h-8 w-8 text-white mr-2" />
               <h1 className="text-xl font-bold text-white">TradeShare</h1>
-            </div>
+            </Link>
             <button
               onClick={() => setSidebarOpen(false)}
               className="text-white/80 hover:text-white"
@@ -201,8 +215,14 @@ function Layout({ children }) {
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-72 lg:flex-col">
         <div className="flex flex-col flex-grow bg-secondary-800 border-r border-secondary-700">
           <div className="flex h-16 items-center px-6 bg-gradient-to-r from-primary-600 to-sage-600">
-            <SparklesIcon className="h-8 w-8 text-white mr-2" />
-            <h1 className="text-xl font-bold text-white">TradeShare</h1>
+            <Link 
+              to="/dashboard" 
+              className="flex items-center hover:opacity-80 transition-opacity duration-200"
+              onClick={() => setSidebarOpen(false)}
+            >
+              <SparklesIcon className="h-8 w-8 text-white mr-2" />
+              <h1 className="text-xl font-bold text-white">TradeShare</h1>
+            </Link>
           </div>
           {/* User Profile Section */}
           {(isAuthenticated || isDemoMode) && (
@@ -305,14 +325,47 @@ function Layout({ children }) {
                     <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-danger-500 ring-2 ring-secondary-800" />
                   </button>
                   <div className="flex items-center space-x-2">
-                    <span className="text-sm text-neutral-300">
-                      {isDemoMode ? 'Demo Mode' : (user?.first_name || user?.email)}
-                    </span>
+                    <div 
+                      className="relative"
+                      onMouseEnter={() => setShowUserDropdown(true)}
+                      onMouseLeave={() => setShowUserDropdown(false)}
+                    >
+                      <button className="flex items-center space-x-1 text-sm text-neutral-300 hover:text-neutral-100 transition-colors">
+                        <span>{isDemoMode ? 'Demo Mode' : (user?.first_name || user?.email)}</span>
+                        <ChevronDownIcon className="h-4 w-4" />
+                      </button>
+                      
+                      {/* Dropdown Menu */}
+                      {showUserDropdown && (
+                        <div className="absolute right-0 mt-2 w-48 bg-secondary-800 border border-secondary-600 rounded-lg shadow-lg z-50">
+                          <div className="py-1">
+                            <Link
+                              to="/account"
+                              className="flex items-center px-4 py-2 text-sm text-neutral-300 hover:bg-secondary-700 hover:text-neutral-100 transition-colors"
+                              onClick={() => setShowUserDropdown(false)}
+                            >
+                              <UserIcon className="h-4 w-4 mr-2" />
+                              Account Settings
+                            </Link>
+                            <button
+                              onClick={() => {
+                                setShowUserDropdown(false);
+                                handleLogout();
+                              }}
+                              className="flex items-center w-full px-4 py-2 text-sm text-neutral-300 hover:bg-secondary-700 hover:text-neutral-100 transition-colors"
+                            >
+                              <ArrowRightOnRectangleIcon className="h-4 w-4 mr-2" />
+                              Logout
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2 px-3 py-1 bg-secondary-700 rounded-lg border border-secondary-600">
+                  <div className="flex items-center space-x-2">
                     <div className={`h-3 w-3 rounded-full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
                     <span className={`text-sm font-medium ${isConnected ? 'text-green-400' : 'text-red-400'}`}>
-                      {isConnected ? 'Live' : 'Disconnected'}
+                      {/* {isConnected ? 'Live' : 'Disconnected'} */}
                     </span>
                   </div>
                 </div>
@@ -330,9 +383,11 @@ function Layout({ children }) {
 
         {/* Page content */}
         <main className="p-4 lg:p-8">
-          <LiveDataContext.Provider value={{ isConnected }}>
-            {children}
-          </LiveDataContext.Provider>
+          <ErrorBoundary>
+            <LiveDataContext.Provider value={{ isConnected }}>
+              {children}
+            </LiveDataContext.Provider>
+          </ErrorBoundary>
         </main>
       </div>
 
