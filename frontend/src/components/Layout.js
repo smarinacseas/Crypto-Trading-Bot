@@ -18,6 +18,9 @@ import {
   ChevronDownIcon,
 } from '@heroicons/react/24/outline';
 import { Badge } from './ui/badge.jsx';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar.jsx';
+import { Separator } from './ui/separator.jsx';
+import { Button } from './ui/button.jsx';
 import AuthModal from './AuthModal';
 import ErrorBoundary from './ErrorBoundary';
 
@@ -153,9 +156,12 @@ function Layout({ children }) {
                 onClick={() => setSidebarOpen(false)}
               >
                 <div className="flex-shrink-0">
-                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-600 to-sage-600 flex items-center justify-center">
-                    <UserIcon className="h-6 w-6 text-white" />
-                  </div>
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={user?.avatar_url} alt={user?.first_name || 'User'} />
+                    <AvatarFallback className="bg-gradient-to-br from-primary-600 to-sage-600 text-white">
+                      {isDemoMode ? 'DM' : (user?.first_name?.[0] || user?.email?.[0] || 'U')}
+                    </AvatarFallback>
+                  </Avatar>
                 </div>
                 <div className="ml-3">
                   <p className="text-sm font-medium text-neutral-100">
@@ -197,7 +203,9 @@ function Layout({ children }) {
             </div>
 
             {/* Divider */}
-            <div className="my-6 border-t border-secondary-600" />
+            <div className="my-6">
+              <Separator className="bg-secondary-600" />
+            </div>
 
             {/* Additional Actions */}
             <div className="space-y-1">
@@ -233,9 +241,12 @@ function Layout({ children }) {
                 onClick={() => setSidebarOpen(false)}
               >
                 <div className="flex-shrink-0">
-                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-600 to-sage-600 flex items-center justify-center">
-                    <UserIcon className="h-6 w-6 text-white" />
-                  </div>
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={user?.avatar_url} alt={user?.first_name || 'User'} />
+                    <AvatarFallback className="bg-gradient-to-br from-primary-600 to-sage-600 text-white">
+                      {isDemoMode ? 'DM' : (user?.first_name?.[0] || user?.email?.[0] || 'U')}
+                    </AvatarFallback>
+                  </Avatar>
                 </div>
                 <div className="ml-3">
                   <p className="text-sm font-medium text-neutral-100">
@@ -276,7 +287,9 @@ function Layout({ children }) {
             </div>
 
             {/* Divider */}
-            <div className="my-6 border-t border-secondary-600" />
+            <div className="my-6">
+              <Separator className="bg-secondary-600" />
+            </div>
 
             {/* Additional Actions */}
             <div className="space-y-1">

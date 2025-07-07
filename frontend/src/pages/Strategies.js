@@ -16,18 +16,45 @@ import {
   PlusIcon
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid, HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
-import { Card, Button, Input, Badge, Tabs, Spinner } from '../components/ui';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card.jsx';
+import { Button } from '../components/ui/button.jsx';
+import { Input } from '../components/ui/input.jsx';
+import { Badge } from '../components/ui/badge.jsx';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs.jsx';
+import { 
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../components/ui/table.jsx';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '../components/ui/pagination.jsx';
+import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar.jsx';
+import { Progress } from '../components/ui/progress.jsx';
+import { Separator } from '../components/ui/separator.jsx';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select.jsx';
 import StrategyDetailModal from '../components/StrategyDetailModal';
 
 const Strategies = () => {
   const [strategies, setStrategies] = useState([]);
   const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('marketplace');
   const [sortBy, setSortBy] = useState('created_at');
   const [sortOrder, setSortOrder] = useState('desc');
   const [selectedStrategy, setSelectedStrategy] = useState(null);
   const [showStrategyModal, setShowStrategyModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
   // Mock data for demonstration
   const mockStrategies = [
@@ -228,17 +255,6 @@ const Strategies = () => {
     </Card>
   );
 
-  const filteredStrategies = strategies.filter(strategy => {
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      return (
-        strategy.name.toLowerCase().includes(searchLower) ||
-        strategy.short_description.toLowerCase().includes(searchLower) ||
-        strategy.tags?.some(tag => tag.toLowerCase().includes(searchLower))
-      );
-    }
-    return true;
-  });
 
   const tabs = [
     {
@@ -285,9 +301,7 @@ const Strategies = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[...Array(6)].map((_, i) => (
                 <Card key={i} className="h-96">
-                  <Spinner.Overlay show={true}>
-                    <div className="h-full" />
-                  </Spinner.Overlay>
+                  <div className="animate-pulse bg-secondary-700 rounded-lg h-full" />
                 </Card>
               ))}
             </div>
@@ -342,6 +356,16 @@ const Strategies = () => {
     }
   ];
 
+  // Pagination logic
+  const filteredStrategies = strategies.filter(strategy =>
+    strategy.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    strategy.short_description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  
+  const totalPages = Math.ceil(filteredStrategies.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedStrategies = filteredStrategies.slice(startIndex, startIndex + itemsPerPage);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -358,39 +382,266 @@ const Strategies = () => {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="text-center">
-          <div className="p-4">
+        <Card>
+          <CardContent className="text-center p-6">
             <div className="text-2xl font-bold text-neutral-100">156</div>
             <div className="text-sm text-neutral-400">Total Strategies</div>
-          </div>
+          </CardContent>
         </Card>
-        <Card className="text-center">
-          <div className="p-4">
+        <Card>
+          <CardContent className="text-center p-6">
             <div className="text-2xl font-bold text-neutral-100">4.2</div>
             <div className="text-sm text-neutral-400">Avg Rating</div>
-          </div>
+          </CardContent>
         </Card>
-        <Card className="text-center">
-          <div className="p-4">
+        <Card>
+          <CardContent className="text-center p-6">
             <div className="text-2xl font-bold text-success-400">+23.5%</div>
             <div className="text-sm text-neutral-400">Avg Return</div>
-          </div>
+          </CardContent>
         </Card>
-        <Card className="text-center">
-          <div className="p-4">
+        <Card>
+          <CardContent className="text-center p-6">
             <div className="text-2xl font-bold text-neutral-100">1,247</div>
             <div className="text-sm text-neutral-400">Active Users</div>
-          </div>
+          </CardContent>
         </Card>
       </div>
 
-      {/* Strategy Tabs */}
-      <Tabs 
-        tabs={tabs}
-        defaultTab={0}
-        onChange={setActiveTab}
-        variant="pills"
-      />
+      {/* Strategy Tabs & Filters */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-neutral-100">Trading Strategies</CardTitle>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <Input
+                  placeholder="Search strategies..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-64 bg-secondary-700 border-secondary-600 text-neutral-100"
+                />
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-32 bg-secondary-700 border-secondary-600 text-neutral-100">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-secondary-700 border-secondary-600">
+                    <SelectItem value="created_at">Latest</SelectItem>
+                    <SelectItem value="avg_rating">Rating</SelectItem>
+                    <SelectItem value="latest_return">Return</SelectItem>
+                    <SelectItem value="subscriber_count">Popular</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="bg-secondary-700">
+              <TabsTrigger value="marketplace" className="data-[state=active]:bg-primary-600">
+                Marketplace
+              </TabsTrigger>
+              <TabsTrigger value="mystrategies" className="data-[state=active]:bg-primary-600">
+                My Strategies
+              </TabsTrigger>
+              <TabsTrigger value="subscribed" className="data-[state=active]:bg-primary-600">
+                Subscribed
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="marketplace" className="mt-6">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-secondary-600">
+                    <TableHead className="text-neutral-300">Strategy</TableHead>
+                    <TableHead className="text-neutral-300">Performance</TableHead>
+                    <TableHead className="text-neutral-300">Risk</TableHead>
+                    <TableHead className="text-neutral-300">Rating</TableHead>
+                    <TableHead className="text-neutral-300">Subscribers</TableHead>
+                    <TableHead className="text-neutral-300">Min Capital</TableHead>
+                    <TableHead className="text-neutral-300">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8">
+                        <div className="flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+                          <span className="ml-2 text-neutral-400">Loading strategies...</span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : paginatedStrategies.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-neutral-400">
+                        No strategies found matching your criteria
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    paginatedStrategies.map((strategy) => (
+                      <TableRow key={strategy.id} className="border-secondary-600 hover:bg-secondary-700/50">
+                        <TableCell>
+                          <div className="flex items-center space-x-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={strategy.avatar_url} alt={strategy.name} />
+                              <AvatarFallback className="bg-primary-600 text-white">
+                                {strategy.name.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-medium text-neutral-100">{strategy.name}</div>
+                              <div className="text-sm text-neutral-400 capitalize">{strategy.strategy_type}</div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-2">
+                              <span className={`text-sm font-medium ${
+                                strategy.latest_return >= 0 ? 'text-success-400' : 'text-danger-400'
+                              }`}>
+                                {strategy.latest_return >= 0 ? '+' : ''}{strategy.latest_return}%
+                              </span>
+                              <span className="text-xs text-neutral-400">Total Return</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Progress 
+                                value={strategy.latest_win_rate} 
+                                className="w-16 h-2"
+                              />
+                              <span className="text-xs text-neutral-400">{strategy.latest_win_rate}% Win Rate</span>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={
+                              strategy.risk_level === 'low' ? 'success' : 
+                              strategy.risk_level === 'medium' ? 'warning' : 'danger'
+                            }
+                            size="sm"
+                          >
+                            {strategy.risk_level.toUpperCase()}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-1">
+                            {[...Array(5)].map((_, i) => (
+                              <StarIcon
+                                key={i}
+                                className={`h-4 w-4 ${
+                                  i < Math.floor(strategy.avg_rating)
+                                    ? 'text-warning-400 fill-current'
+                                    : 'text-neutral-600'
+                                }`}
+                              />
+                            ))}
+                            <span className="text-sm text-neutral-400 ml-1">
+                              ({strategy.total_ratings})
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center text-sm text-neutral-300">
+                            <UsersIcon className="h-4 w-4 mr-1" />
+                            {strategy.subscriber_count}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm text-neutral-300">
+                            ${strategy.min_capital.toLocaleString()}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedStrategy(strategy);
+                                setShowStrategyModal(true);
+                              }}
+                            >
+                              <EyeIcon className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                            <Button size="sm" variant="primary">
+                              Subscribe
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="mt-6 flex items-center justify-between">
+                  <div className="text-sm text-neutral-400">
+                    Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredStrategies.length)} of {filteredStrategies.length} strategies
+                  </div>
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious 
+                          onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                          className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        />
+                      </PaginationItem>
+                      {[...Array(Math.min(5, totalPages))].map((_, i) => {
+                        const page = i + 1;
+                        return (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              onClick={() => setCurrentPage(page)}
+                              isActive={currentPage === page}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        );
+                      })}
+                      {totalPages > 5 && <PaginationEllipsis />}
+                      <PaginationItem>
+                        <PaginationNext 
+                          onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                          className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="mystrategies" className="mt-6">
+              <div className="text-center py-8 text-neutral-400">
+                <ChartBarIcon className="h-12 w-12 mx-auto mb-4 text-neutral-600" />
+                <p className="text-lg font-medium mb-2">No strategies created yet</p>
+                <p className="mb-4">Create your first trading strategy to get started</p>
+                <Button variant="primary">
+                  <PlusIcon className="h-4 w-4 mr-2" />
+                  Create Strategy
+                </Button>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="subscribed" className="mt-6">
+              <div className="text-center py-8 text-neutral-400">
+                <UsersIcon className="h-12 w-12 mx-auto mb-4 text-neutral-600" />
+                <p className="text-lg font-medium mb-2">No subscriptions yet</p>
+                <p className="mb-4">Subscribe to strategies to track their performance</p>
+                <Button variant="outline">Browse Marketplace</Button>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
 
       {/* Strategy Detail Modal */}
       <StrategyDetailModal

@@ -1,19 +1,41 @@
 import React, { useState } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { useForm } from 'react-hook-form';
+import { X, Mail, Lock, User, Loader2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog.jsx';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from './ui/form.jsx';
+import { Input } from './ui/input.jsx';
+import { Button } from './ui/button.jsx';
+import { Alert, AlertDescription } from './ui/alert.jsx';
+import { Separator } from './ui/separator.jsx';
 
 function AuthModal({ isOpen, onClose }) {
   const [isLogin, setIsLogin] = useState(true);
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    firstName: '',
-    lastName: '',
-  });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const form = useForm({
+    defaultValues: {
+      email: '',
+      password: '',
+      firstName: '',
+      lastName: '',
+    },
+  });
+
+  const handleSubmit = async (data) => {
     setIsLoading(true);
     setError('');
 
@@ -21,8 +43,8 @@ function AuthModal({ isOpen, onClose }) {
       if (isLogin) {
         // Login
         const formBody = new FormData();
-        formBody.append('username', formData.email);
-        formBody.append('password', formData.password);
+        formBody.append('username', data.email);
+        formBody.append('password', data.password);
 
         const response = await fetch('/auth/jwt/login', {
           method: 'POST',
@@ -30,9 +52,8 @@ function AuthModal({ isOpen, onClose }) {
         });
 
         if (response.ok) {
-          const data = await response.json();
-          localStorage.setItem('auth_token', data.access_token);
-          // Clear demo mode when user successfully logs in
+          const responseData = await response.json();
+          localStorage.setItem('auth_token', responseData.access_token);
           localStorage.removeItem('demo_mode');
           onClose();
           window.location.reload();
@@ -47,17 +68,17 @@ function AuthModal({ isOpen, onClose }) {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            email: formData.email,
-            password: formData.password,
-            first_name: formData.firstName,
-            last_name: formData.lastName,
+            email: data.email,
+            password: data.password,
+            first_name: data.firstName,
+            last_name: data.lastName,
           }),
         });
 
         if (response.ok) {
           setIsLogin(true);
           setError('');
-          // Show success message
+          form.reset();
         } else {
           const errorData = await response.json();
           setError(errorData.detail || 'Registration failed');
@@ -70,120 +91,163 @@ function AuthModal({ isOpen, onClose }) {
     setIsLoading(false);
   };
 
-  const handleInputChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+  const toggleMode = () => {
+    setIsLogin(!isLogin);
+    setError('');
+    form.reset();
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="fixed inset-0 bg-black bg-opacity-50" onClick={onClose} />
-      <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">
-            {isLogin ? 'Sign In' : 'Create Account'}
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-500"
-          >
-            <XMarkIcon className="w-6 h-6" />
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md bg-secondary-800 border-secondary-700">
+        <DialogHeader className="space-y-3">
+          <DialogTitle className="text-2xl font-bold text-neutral-100 text-center">
+            {isLogin ? 'Welcome Back' : 'Create Account'}
+          </DialogTitle>
+          <DialogDescription className="text-neutral-400 text-center">
+            {isLogin 
+              ? 'Sign in to your account to continue' 
+              : 'Join us and start your trading journey'
+            }
+          </DialogDescription>
+        </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {!isLogin && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  First Name
-                </label>
-                <input
-                  type="text"
-                  name="firstName"
-                  value={formData.firstName}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
-                  required={!isLogin}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Last Name
-                </label>
-                <input
-                  type="text"
-                  name="lastName"
-                  value={formData.lastName}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
-                  required={!isLogin}
-                />
-              </div>
-            </div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
-              required
-            />
-          </div>
-
+        <div className="space-y-6">
           {error && (
-            <div className="text-red-600 text-sm">{error}</div>
+            <Alert variant="destructive" className="bg-danger-500/20 border-danger-500/30">
+              <AlertDescription className="text-danger-300">
+                {error}
+              </AlertDescription>
+            </Alert>
           )}
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full btn-primary disabled:opacity-50"
-          >
-            {isLoading ? 'Loading...' : isLogin ? 'Sign In' : 'Create Account'}
-          </button>
-        </form>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+              {!isLogin && (
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="firstName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-neutral-200">First Name</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                            <Input
+                              {...field}
+                              placeholder="John"
+                              className="pl-10 bg-secondary-700 border-secondary-600 text-neutral-100 placeholder:text-neutral-400"
+                              required={!isLogin}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage className="text-danger-400" />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="lastName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-neutral-200">Last Name</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                            <Input
+                              {...field}
+                              placeholder="Doe"
+                              className="pl-10 bg-secondary-700 border-secondary-600 text-neutral-100 placeholder:text-neutral-400"
+                              required={!isLogin}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage className="text-danger-400" />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
 
-        <div className="mt-4 text-center">
-          <button
-            onClick={() => {
-              setIsLogin(!isLogin);
-              setError('');
-            }}
-            className="text-primary-600 hover:text-primary-700 text-sm"
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-neutral-200">Email</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                        <Input
+                          {...field}
+                          type="email"
+                          placeholder="john@example.com"
+                          className="pl-10 bg-secondary-700 border-secondary-600 text-neutral-100 placeholder:text-neutral-400"
+                          required
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage className="text-danger-400" />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-neutral-200">Password</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                        <Input
+                          {...field}
+                          type="password"
+                          placeholder="••••••••"
+                          className="pl-10 bg-secondary-700 border-secondary-600 text-neutral-100 placeholder:text-neutral-400"
+                          required
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage className="text-danger-400" />
+                  </FormItem>
+                )}
+              />
+
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-primary-600 hover:bg-primary-500 text-white font-medium"
+                size="lg"
+              >
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isLogin ? 'Sign In' : 'Create Account'}
+              </Button>
+            </form>
+          </Form>
+
+          <div className="relative">
+            <Separator className="bg-secondary-600" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="bg-secondary-800 px-2 text-xs text-neutral-400">OR</span>
+            </div>
+          </div>
+
+          <Button
+            variant="ghost"
+            onClick={toggleMode}
+            className="w-full text-primary-400 hover:text-primary-300 hover:bg-primary-600/20"
           >
             {isLogin 
               ? "Don't have an account? Sign up" 
               : "Already have an account? Sign in"
             }
-          </button>
+          </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
