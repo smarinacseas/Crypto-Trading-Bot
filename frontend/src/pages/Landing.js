@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   ChartBarIcon, 
   CurrencyDollarIcon, 
@@ -7,7 +8,9 @@ import {
   ShieldCheckIcon,
   SparklesIcon,
   ArrowTrendingUpIcon,
-  CheckIcon
+  CheckIcon,
+  UserIcon,
+  ChevronDownIcon
 } from '@heroicons/react/24/outline';
 import { Button, Card, Modal } from '../components/ui';
 import AuthModal from '../components/AuthModal';
@@ -98,13 +101,30 @@ const pricingPlans = [
 const Landing = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const navigate = useNavigate();
+  const { enterDemoMode, user, isAuthenticated, getDisplayName, signOut } = useAuth();
+  const userMenuRef = useRef(null);
 
   const handleDemoMode = () => {
-    // Set demo mode flag and navigate to dashboard
-    localStorage.setItem('demo_mode', 'true');
+    // Set demo mode and navigate to dashboard
+    enterDemoMode();
     navigate('/dashboard');
   };
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-secondary-900 to-secondary-800">
@@ -116,15 +136,62 @@ const Landing = () => {
               <h1 className="text-2xl font-bold text-neutral-100">TradeShare</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <Button variant="ghost" onClick={handleDemoMode}>
-                Demo
-              </Button>
-              <Button variant="ghost" onClick={() => setShowAuthModal(true)} className="underline">
-                Log In
-              </Button>
-              <Button onClick={() => setShowAuthModal(true)}>
-                Get Started
-              </Button>
+              {!isAuthenticated && (
+                <Button variant="ghost" onClick={handleDemoMode}>
+                  Demo
+                </Button>
+              )}
+              {isAuthenticated && user ? (
+                <div className="relative" ref={userMenuRef}>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setShowUserMenu(!showUserMenu)}
+                    className="flex items-center space-x-2 text-neutral-100"
+                  >
+                    <UserIcon className="h-5 w-5" />
+                    <span>{getDisplayName()}</span>
+                    <ChevronDownIcon className="h-4 w-4" />
+                  </Button>
+                  
+                  {showUserMenu && (
+                    <div className="absolute right-0 mt-2 w-48 bg-secondary-800 rounded-md shadow-lg border border-secondary-700 z-50">
+                      <div className="py-1">
+                        <div className="px-4 py-2 text-sm text-neutral-300 border-b border-secondary-700">
+                          Signed in as<br />
+                          <span className="font-medium text-neutral-100">{user.email}</span>
+                        </div>
+                        <button
+                          onClick={() => {
+                            navigate('/dashboard');
+                            setShowUserMenu(false);
+                          }}
+                          className="block w-full text-left px-4 py-2 text-sm text-neutral-100 hover:bg-secondary-700"
+                        >
+                          Dashboard
+                        </button>
+                        <button
+                          onClick={() => {
+                            signOut();
+                            setShowUserMenu(false);
+                          }}
+                          className="block w-full text-left px-4 py-2 text-sm text-neutral-100 hover:bg-secondary-700"
+                        >
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <Button variant="ghost" onClick={() => setShowAuthModal(true)} className="underline">
+                    Log In
+                  </Button>
+                  <Button onClick={() => setShowAuthModal(true)}>
+                    Get Started
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>

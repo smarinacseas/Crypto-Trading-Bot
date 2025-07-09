@@ -168,6 +168,16 @@ const Strategies = () => {
     setShowStrategyModal(true);
   };
 
+  // Filtering and pagination logic
+  const filteredStrategies = strategies.filter(strategy =>
+    strategy.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    strategy.short_description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  
+  const totalPages = Math.ceil(filteredStrategies.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedStrategies = filteredStrategies.slice(startIndex, startIndex + itemsPerPage);
+
   const StrategyCard = ({ strategy }) => (
     <Card hover className="h-full">
       <div className="flex flex-col h-full">
@@ -256,115 +266,6 @@ const Strategies = () => {
   );
 
 
-  const tabs = [
-    {
-      id: 'marketplace',
-      label: 'Marketplace',
-      icon: <FireIcon className="h-4 w-4" />,
-      content: (
-        <div className="space-y-6">
-          {/* Search and Filters */}
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="flex-1">
-              <Input
-                icon={<MagnifyingGlassIcon className="h-5 w-5" />}
-                placeholder="Search strategies, tags, or descriptions..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                fullWidth
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm">
-                <FunnelIcon className="h-4 w-4 mr-2" />
-                Filters
-              </Button>
-              <select 
-                className="px-3 py-2 bg-secondary-700 border border-secondary-600 rounded-lg text-neutral-100 text-sm"
-                value={`${sortBy}-${sortOrder}`}
-                onChange={(e) => {
-                  const [field, order] = e.target.value.split('-');
-                  setSortBy(field);
-                  setSortOrder(order);
-                }}
-              >
-                <option value="created_at-desc">Newest First</option>
-                <option value="rating-desc">Highest Rated</option>
-                <option value="return-desc">Best Performance</option>
-                <option value="subscribers-desc">Most Popular</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Strategy Grid */}
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[...Array(6)].map((_, i) => (
-                <Card key={i} className="h-96">
-                  <div className="animate-pulse bg-secondary-700 rounded-lg h-full" />
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredStrategies.map((strategy) => (
-                <StrategyCard key={strategy.id} strategy={strategy} />
-              ))}
-            </div>
-          )}
-
-          {filteredStrategies.length === 0 && !loading && (
-            <div className="text-center py-12">
-              <MagnifyingGlassIcon className="h-12 w-12 text-neutral-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-neutral-100 mb-2">No strategies found</h3>
-              <p className="text-neutral-400 mb-4">Try adjusting your search terms or filters</p>
-              <Button variant="primary">Browse All Strategies</Button>
-            </div>
-          )}
-        </div>
-      )
-    },
-    {
-      id: 'my-strategies',
-      label: 'My Strategies',
-      icon: <UserIcon className="h-4 w-4" />,
-      content: (
-        <div className="text-center py-12">
-          <ChartBarIcon className="h-12 w-12 text-neutral-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-neutral-100 mb-2">No strategies created yet</h3>
-          <p className="text-neutral-400 mb-4">Create your first trading strategy to get started</p>
-          <Button variant="primary">
-            <PlusIcon className="h-4 w-4 mr-2" />
-            Create Strategy
-          </Button>
-        </div>
-      )
-    },
-    {
-      id: 'subscriptions',
-      label: 'Subscriptions',
-      icon: <HeartIconSolid className="h-4 w-4" />,
-      badge: '3',
-      content: (
-        <div className="text-center py-12">
-          <HeartIcon className="h-12 w-12 text-neutral-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-neutral-100 mb-2">No subscriptions yet</h3>
-          <p className="text-neutral-400 mb-4">Subscribe to strategies to track their performance</p>
-          <Button variant="outline">Browse Marketplace</Button>
-        </div>
-      )
-    }
-  ];
-
-  // Pagination logic
-  const filteredStrategies = strategies.filter(strategy =>
-    strategy.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    strategy.short_description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-  
-  const totalPages = Math.ceil(filteredStrategies.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedStrategies = filteredStrategies.slice(startIndex, startIndex + itemsPerPage);
 
   return (
     <div className="space-y-6">

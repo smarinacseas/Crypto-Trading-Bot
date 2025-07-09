@@ -15,18 +15,21 @@ A full-stack cryptocurrency trading platform built with React and FastAPI. The p
 ## Tech Stack
 
 **Frontend**
+
 - React 18 with TailwindCSS
 - Custom UI components with Radix primitives
 - Chart.js for data visualization
 - TradingView widgets
 
 **Backend**
+
 - FastAPI with automatic API documentation
 - SQLAlchemy ORM with async support
 - JWT authentication
 - WebSocket for real-time communication
 
 **Trading Infrastructure**
+
 - HyperLiquid SDK integration
 - CCXT library for multi-exchange support
 - Real-time data streams from Binance
@@ -35,6 +38,7 @@ A full-stack cryptocurrency trading platform built with React and FastAPI. The p
 ## Current Features
 
 ### ✅ **Web Application**
+
 - React frontend with trading interface
 - FastAPI backend with REST API
 - User authentication and registration
@@ -42,6 +46,7 @@ A full-stack cryptocurrency trading platform built with React and FastAPI. The p
 - WebSocket infrastructure for real-time data
 
 ### ✅ **Trading Backend**
+
 - Multi-exchange integration (HyperLiquid, MEXC, Binance)
 - Real-time WebSocket data streams
 - Technical indicators (SMA, support/resistance)
@@ -59,43 +64,77 @@ A full-stack cryptocurrency trading platform built with React and FastAPI. The p
 ## Quick Start
 
 ### Prerequisites
-- Python 3.12+
+
+- Python 3.11+ (recommended: 3.12)
 - Node.js 18+
 
 ### Installation
 
-1. **Clone and install dependencies**
+1. **Clone the repository**
+
    ```bash
    git clone https://github.com/yourusername/crypto-trading-bot.git
    cd crypto-trading-bot
-   
-   # Backend
-   python -m venv venv
-   source venv/bin/activate  # Windows: venv\Scripts\activate
+   ```
+
+2. **Set up Python environment**
+
+   ```bash
+   # Create a virtual environment (e.g. 'quant')
+   python3 -m venv quant
+
+   # Activate virtual environment
+   source quant/bin/activate  # Windows: quant\Scripts\activate
+
+   # Install dependencies
    pip install -r backend/requirements.txt
-   
-   # Frontend
+   ```
+
+3. **Install frontend dependencies**
+
+   ```bash
    cd frontend
    npm install
    cd ..
    ```
 
-2. **Run the application**
+4. **Set up environment variables (optional)**
+
    ```bash
-   # Start backend (terminal 1)
+   # Copy the example environment file
+   cp .env.example .env
+
+   # Edit .env with your API credentials for full trading features
+   ```
+
+### Running the Application
+
+1. **Start backend (Terminal 1)**
+
+   ```bash
+   # Activate virtual environment
+   source quant/bin/activate
+
+   # Start FastAPI server
    uvicorn backend.app.main:app --reload
-   
-   # Start frontend (terminal 2)
-   cd frontend && npm start
+   ```
+
+2. **Start frontend (Terminal 2)**
+
+   ```bash
+   cd frontend
+   npm start
    ```
 
 3. **Access the application**
    - Frontend: http://localhost:3000
-   - API docs: http://127.0.0.1:8000/docs
+   - API Documentation: http://127.0.0.1:8000/docs
+   - Interactive API: http://127.0.0.1:8000/redoc
 
 ### Optional: Trading Features
 
 For full trading capabilities, add API credentials to `.env`:
+
 ```bash
 COINBASE_API_KEY=your_key
 COINBASE_API_SECRET=your_secret
@@ -105,6 +144,7 @@ HYPERLIQUID_SECRET_KEY=your_private_key
 ```
 
 Run trading services:
+
 ```bash
 # Real-time data streams
 python -m backend.app.scripts.binance_streaming_entry
@@ -116,11 +156,13 @@ python -m backend.app.indicators.indicators
 ## API Endpoints
 
 ### Authentication
+
 - `POST /auth/register` - User registration
 - `POST /auth/jwt/login` - Login
 - `GET /users/me` - User profile
 
 ### Trading
+
 - `GET /api/strategies` - Manage trading strategies
 - `POST /api/backtests` - Run backtests
 - `GET /api/portfolio` - Portfolio data
@@ -151,7 +193,8 @@ Full documentation: http://127.0.0.1:8000/docs
 ## Development
 
 ```bash
-# Backend development
+# Backend development with auto-reload
+source quant/bin/activate
 uvicorn backend.app.main:app --reload
 
 # Frontend development
@@ -162,21 +205,43 @@ python -m backend.app.indicators.indicators
 python -m backend.app.scripts.binance_streaming_entry
 ```
 
+### Troubleshooting
+
+**Installation Issues:**
+
+- Ensure Python 3.11+ is installed: `python3 --version`
+- Update pip if needed: `pip install --upgrade pip`
+- If packages fail to install, try: `pip install --force-reinstall <package-name>`
+
+**Running Issues:**
+
+- Always activate virtual environment: `source quant/bin/activate`
+- Verify uvicorn is installed: `which uvicorn`
+- Check API docs at: http://127.0.0.1:8000/docs
+
+**npm Security Warnings:**
+
+- Development dependency warnings are normal and don't affect functionality
+- Do NOT run `npm audit fix --force` as it will break the application
+
 ## Roadmap
 
 **Phase 1: Core Platform** ✅
+
 - FastAPI backend with authentication
 - React frontend
 - Database integration
 - WebSocket infrastructure
 
 **Phase 2: Integration** 🚧
+
 - Frontend-backend data integration
 - Real-time trading interface
 - Paper trading system
 - Strategy backtesting UI
 
 **Phase 3: Advanced Features** 🔄
+
 - Machine learning integration
 - Advanced order types
 - Risk management systems

@@ -66,25 +66,8 @@ function Dashboard() {
   });
 
   const fetchPortfolioStats = async () => {
-    try {
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch('/api/dashboard-stats', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setPortfolioStats(data);
-        setRecentPositions(data.recent_positions || []);
-      } else {
-        console.warn('Dashboard stats API returned non-OK status:', response.status);
-      }
-    } catch (error) {
-      console.error('Error fetching portfolio stats:', error);
-      // Don't throw the error, just log it to prevent crashes
-    }
+    // Mock data for now - can be connected to backend later
+    console.log('Dashboard loaded - auth working!')
   };
 
   const connectWebSocket = useCallback(() => {

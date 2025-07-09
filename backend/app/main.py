@@ -6,6 +6,7 @@ from backend.app.api.routes.portfolio import router as portfolio_router
 from backend.app.api.routes.strategies import router as strategies_router
 from backend.app.api.routes.backtests import router as backtests_router
 from backend.app.api.routes.paper_trading import router as paper_trading_router
+from backend.app.api.routes.auth import router as supabase_auth_router
 from backend.app.core.auth import fastapi_users, auth_backend
 from backend.app.schemas.user import UserRead, UserCreate
 from backend.app.core.config import settings
@@ -49,6 +50,7 @@ app.include_router(portfolio_router, prefix="/api")
 app.include_router(strategies_router, prefix="/api", tags=["strategies"])
 app.include_router(backtests_router, prefix="/api/backtests", tags=["backtests"])
 app.include_router(paper_trading_router, prefix="/api/paper-trading", tags=["paper-trading"])
+app.include_router(supabase_auth_router, prefix="/api/auth", tags=["supabase-auth"])
 
 # Authentication routes
 app.include_router(

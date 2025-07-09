@@ -14,14 +14,53 @@
       "Bash(npx:*)",
       "Bash(mkdir:*)",
       "Bash(npm run build:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs",
+      "WebFetch(domain:ui.shadcn.com)",
+      "Bash(npm start)",
+      "Bash(PORT=3001 npm start)",
+      "Bash(node:*)",
+      "mcp__puppeteer__puppeteer_navigate",
+      "mcp__puppeteer__puppeteer_evaluate",
+      "mcp__puppeteer__puppeteer_screenshot",
+      "mcp__puppeteer__puppeteer_click",
+      "Bash(curl:*)",
+      "Bash(PYTHONPATH=/Users/stefanmarinac/VSCode_Projects/Crypto-Trading-Bot /Users/stefanmarinac/VSCode_Projects/Crypto-Trading-Bot/quant/bin/python backend/app/main.py)",
+      "Bash(/Users/stefanmarinac/VSCode_Projects/Crypto-Trading-Bot/quant/bin/python -m pip install aiosqlite)",
+      "Bash(/Users/stefanmarinac/VSCode_Projects/Crypto-Trading-Bot/quant/bin/python -m pip install fastapi-users-db-sqlalchemy)",
+      "Bash(/Users/stefanmarinac/VSCode_Projects/Crypto-Trading-Bot/quant/bin/python -m pip install termcolor alembic)",
+      "Bash(/Users/stefanmarinac/VSCode_Projects/Crypto-Trading-Bot/quant/bin/python -m pip install websockets)",
+      "Bash(/Users/stefanmarinac/VSCode_Projects/Crypto-Trading-Bot/quant/bin/python -m pip install aiohttp requests)",
+      "mcp__supabase__query",
+      "mcp__supabase__insert",
+      "mcp__supabase__update",
+      "mcp__supabase__delete",
+      "mcp__supabase__schema",
+      "Bash(pip show:*)",
+      "Bash(pip check)",
+      "mcp__puppeteer__puppeteer_fill"
     ],
     "deny": []
   },
   "mcpServers": {
     "puppeteer": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-puppeteer"]
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-puppeteer"
+      ]
+    },
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--project-ref=cvionczaslgqoshqqtuy"
+      ],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "sbp_6202020e473826c8726ae495dcf4ee9d433585d3"
+      }
     }
   }
 }

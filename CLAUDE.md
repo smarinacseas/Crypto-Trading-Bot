@@ -33,6 +33,10 @@ This is an automated crypto trading bot that connects to multiple exchanges for 
 
 ### Starting the Application
 ```bash
+# Create and activate virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
 # Install dependencies
 pip install -r backend/requirements.txt
 

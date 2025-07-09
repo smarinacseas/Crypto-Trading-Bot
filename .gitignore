@@ -50,19 +50,26 @@ build/
 *.tmp
 *.temp
 
-# Ignore the virtual environment directory
+# Virtual environments
 venv/
-
-# Ignore the virtual environment directory in the project structure
+quant/
 solana-trading-bot/venv/
 
 # Ignore any other temporary or output files
 *.bak
 *.swp
 
-# Ignore .cursorrules
+# Development/troubleshooting files
 .cursorrules
 CLAUDE.md
+PATH_STRUCTURE.md
+SUPABASE_MCP_SETUP.md
+**/BUGFIX-*.md
+**/TEST-REPORT.md
+**/*-test-error.png
+**/*-screenshot.png
+test_supabase_connection.py
+simple_supabase_test.py
 
 # Node.js dependencies
 node_modules/

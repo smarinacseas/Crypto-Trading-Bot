@@ -24,6 +24,13 @@
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
     --radius: 0.5rem;
+    
+    /* Chart colors for trading dashboard */
+    --chart-1: 142 76% 36%;  /* Success green */
+    --chart-2: 346 87% 43%;  /* Danger red */
+    --chart-3: 47 96% 53%;   /* Warning yellow */
+    --chart-4: 217 91% 60%;  /* Info blue */
+    --chart-5: 263 70% 50%;  /* Purple */
   }
   
   .dark {
@@ -46,6 +53,13 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
+    
+    /* Chart colors for dark theme */
+    --chart-1: 142 76% 36%;
+    --chart-2: 346 87% 43%;
+    --chart-3: 47 96% 53%;
+    --chart-4: 217 91% 60%;
+    --chart-5: 263 70% 50%;
   }
 
   html {

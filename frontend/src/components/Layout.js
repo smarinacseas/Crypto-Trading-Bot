@@ -17,12 +17,11 @@ import {
   PlayIcon,
   ChevronDownIcon,
 } from '@heroicons/react/24/outline';
-import { Badge } from './ui/badge.jsx';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar.jsx';
 import { Separator } from './ui/separator.jsx';
-import { Button } from './ui/button.jsx';
 import AuthModal from './AuthModal';
 import ErrorBoundary from './ErrorBoundary';
+import { useAuth } from '../contexts/AuthContext';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: ChartBarIcon },
@@ -41,55 +40,72 @@ export const LiveDataContext = createContext({ isConnected: false });
 function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState(null);
   const location = useLocation();
   const [isConnected, setIsConnected] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  
+  // Use AuthContext
+  const { user, isAuthenticated, signOut } = useAuth();
 
-  useEffect(() => {
-    // Check if user is authenticated
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      setIsAuthenticated(true);
-      // Clear demo mode if user is authenticated
-      localStorage.removeItem('demo_mode');
-      fetchUserProfile();
-    }
-  }, []);
-
-  const fetchUserProfile = async () => {
-    try {
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch('/users/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const userData = await response.json();
-        setUser(userData);
-      }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-    }
+  const handleLogout = async () => {
+    await signOut();
   };
 
-  // Only consider demo mode if user is NOT authenticated
-  const isDemoMode = !isAuthenticated && localStorage.getItem('demo_mode') === 'true';
+  // Debug: Log user data to console (remove in production)
+  useEffect(() => {
+    if (user) {
+      console.log('User data:', {
+        email: user.email,
+        provider: user.app_metadata?.provider,
+        user_metadata: user.user_metadata,
+        app_metadata: user.app_metadata
+      });
+    }
+  }, [user]);
 
-  const handleLogout = () => {
-    // Clear all authentication data
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('demo_mode');
+  const getUserDisplayName = () => {
+    // Check if user signed in with Google OAuth
+    const isGoogleUser = user?.app_metadata?.provider === 'google';
     
-    // Reset state
-    setIsAuthenticated(false);
-    setUser(null);
+    if (isGoogleUser) {
+      // For Google users, try to get first name from the full name
+      if (user?.user_metadata?.full_name) {
+        const firstName = user.user_metadata.full_name.split(' ')[0];
+        return firstName;
+      }
+      if (user?.user_metadata?.name) {
+        const firstName = user.user_metadata.name.split(' ')[0];
+        return firstName;
+      }
+      if (user?.user_metadata?.given_name) {
+        return user.user_metadata.given_name;
+      }
+    }
     
-    // Force navigation to landing page
-    window.location.href = '/';
+    // For manual signup users, use their provided name
+    if (user?.user_metadata?.first_name && user?.user_metadata?.last_name) {
+      return `${user.user_metadata.first_name} ${user.user_metadata.last_name}`;
+    }
+    if (user?.user_metadata?.first_name) {
+      return user.user_metadata.first_name;
+    }
+    
+    // Fallback to email if no name is available
+    return user?.email || 'User';
+  };
+
+  const getUserInitials = () => {
+    const name = getUserDisplayName();
+    if (name === 'User') return 'U';
+    
+    // Handle single names (like just first name) and multiple names
+    const nameParts = name.split(' ').filter(part => part.length > 0);
+    if (nameParts.length === 1) {
+      // Single name - take first two characters or just first if name is short
+      return nameParts[0].substring(0, 2).toUpperCase();
+    }
+    // Multiple names - take first character of first two parts
+    return nameParts.slice(0, 2).map(n => n[0]).join('').toUpperCase();
   };
 
   // WebSocket connection for live data status
@@ -110,8 +126,6 @@ function Layout({ children }) {
     ws.onclose = () => {
       console.log('WebSocket disconnected');
       setIsConnected(false);
-      // Optionally, try to reconnect after a delay
-      // setTimeout(() => connectWebSocket(), 3000);
     };
     
     ws.onerror = (error) => {
@@ -147,8 +161,9 @@ function Layout({ children }) {
               <XMarkIcon className="h-6 w-6" />
             </button>
           </div>
+          
           {/* User Profile Section */}
-          {(isAuthenticated || isDemoMode) && (
+          {isAuthenticated && (
             <div className="px-6 py-4 border-b border-secondary-600">
               <Link
                 to="/account"
@@ -157,18 +172,18 @@ function Layout({ children }) {
               >
                 <div className="flex-shrink-0">
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src={user?.avatar_url} alt={user?.first_name || 'User'} />
+                    <AvatarImage src={user?.user_metadata?.avatar_url} alt={getUserDisplayName()} />
                     <AvatarFallback className="bg-gradient-to-br from-primary-600 to-sage-600 text-white">
-                      {isDemoMode ? 'DM' : (user?.first_name?.[0] || user?.email?.[0] || 'U')}
+                      {getUserInitials()}
                     </AvatarFallback>
                   </Avatar>
                 </div>
                 <div className="ml-3">
                   <p className="text-sm font-medium text-neutral-100">
-                    {isDemoMode ? 'Demo User' : (user?.first_name || user?.email || 'User')}
+                    {getUserDisplayName()}
                   </p>
                   <p className="text-xs text-neutral-400">
-                    {isDemoMode && <Badge variant="warning" size="sm">Demo Mode</Badge>}
+                    {user?.email}
                   </p>
                 </div>
               </Link>
@@ -202,17 +217,14 @@ function Layout({ children }) {
               })}
             </div>
 
-            {/* Divider */}
             <div className="my-6">
               <Separator className="bg-secondary-600" />
             </div>
 
-            {/* Additional Actions */}
             <div className="space-y-1">
               <button className="group flex items-center w-full px-3 py-2.5 text-sm font-medium text-neutral-300 rounded-lg hover:bg-secondary-700 hover:text-neutral-100 transition-all duration-200">
                 <BellIcon className="mr-3 h-5 w-5 text-neutral-400 group-hover:text-neutral-300" />
                 <span className="flex-1 text-left">Notifications</span>
-                <Badge variant="danger" size="sm">3</Badge>
               </button>
             </div>
           </nav>
@@ -226,35 +238,34 @@ function Layout({ children }) {
             <Link 
               to="/dashboard" 
               className="flex items-center hover:opacity-80 transition-opacity duration-200"
-              onClick={() => setSidebarOpen(false)}
             >
               <SparklesIcon className="h-8 w-8 text-white mr-2" />
               <h1 className="text-xl font-bold text-white">TradeShare</h1>
             </Link>
           </div>
+          
           {/* User Profile Section */}
-          {(isAuthenticated || isDemoMode) && (
+          {isAuthenticated && (
             <div className="px-6 py-4 border-b border-secondary-600">
               <Link
                 to="/account"
                 className="flex items-center hover:bg-secondary-700 rounded-lg p-2 -m-2 transition-colors duration-200"
-                onClick={() => setSidebarOpen(false)}
               >
                 <div className="flex-shrink-0">
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src={user?.avatar_url} alt={user?.first_name || 'User'} />
+                    <AvatarImage src={user?.user_metadata?.avatar_url} alt={getUserDisplayName()} />
                     <AvatarFallback className="bg-gradient-to-br from-primary-600 to-sage-600 text-white">
-                      {isDemoMode ? 'DM' : (user?.first_name?.[0] || user?.email?.[0] || 'U')}
+                      {getUserInitials()}
                     </AvatarFallback>
                   </Avatar>
                 </div>
                 <div className="ml-3">
                   <p className="text-sm font-medium text-neutral-100">
-                    {isDemoMode ? 'Demo User' : (user?.first_name || user?.email || 'User')}
+                    {getUserDisplayName()}
                   </p>
-                  <p className="text-xs text-neutral-400">
-                    {isDemoMode && <Badge variant="warning" size="sm">Demo Mode</Badge>}
-                  </p>
+                  {/* <p className="text-xs text-neutral-400">
+                    {user?.email}
+                  </p> */}
                 </div>
               </Link>
             </div>
@@ -286,31 +297,30 @@ function Layout({ children }) {
               })}
             </div>
 
-            {/* Divider */}
             <div className="my-6">
               <Separator className="bg-secondary-600" />
             </div>
 
-            {/* Additional Actions */}
             <div className="space-y-1">
               <button className="group flex items-center w-full px-3 py-2.5 text-sm font-medium text-neutral-300 rounded-lg hover:bg-secondary-700 hover:text-neutral-100 transition-all duration-200">
                 <BellIcon className="mr-3 h-5 w-5 text-neutral-400 group-hover:text-neutral-300" />
                 <span className="flex-1 text-left">Notifications</span>
-                <Badge variant="danger" size="sm">3</Badge>
               </button>
             </div>
           </nav>
 
           {/* Logout Button */}
-          <div className="p-4 border-t border-secondary-600">
-            <button
-              onClick={handleLogout}
-              className="group flex items-center w-full px-3 py-2.5 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-50 hover:text-gray-900 transition-all duration-200"
-            >
-              <ArrowRightOnRectangleIcon className="mr-3 h-5 w-5 text-neutral-400 group-hover:text-neutral-300" />
-              <span>Logout</span>
-            </button>
-          </div>
+          {isAuthenticated && (
+            <div className="p-4 border-t border-secondary-600">
+              <button
+                onClick={handleLogout}
+                className="group flex items-center w-full px-3 py-2.5 text-sm font-medium text-neutral-400 rounded-lg hover:bg-secondary-700 hover:text-neutral-100 transition-all duration-200"
+              >
+                <ArrowRightOnRectangleIcon className="mr-3 h-5 w-5 text-neutral-400 group-hover:text-neutral-300" />
+                <span>Logout</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -344,7 +354,7 @@ function Layout({ children }) {
                       onMouseLeave={() => setShowUserDropdown(false)}
                     >
                       <button className="flex items-center space-x-1 text-sm text-neutral-300 hover:text-neutral-100 transition-colors">
-                        <span>{isDemoMode ? 'Demo Mode' : (user?.first_name || user?.email)}</span>
+                        <span>{getUserDisplayName()}</span>
                         <ChevronDownIcon className="h-4 w-4" />
                       </button>
                       
@@ -377,9 +387,6 @@ function Layout({ children }) {
                   </div>
                   <div className="flex items-center space-x-2">
                     <div className={`h-3 w-3 rounded-full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
-                    <span className={`text-sm font-medium ${isConnected ? 'text-green-400' : 'text-red-400'}`}>
-                      {/* {isConnected ? 'Live' : 'Disconnected'} */}
-                    </span>
                   </div>
                 </div>
               ) : (
