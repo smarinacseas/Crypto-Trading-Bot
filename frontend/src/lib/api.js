@@ -20,3 +20,18 @@ export const refreshUniverse = (tickers = null) =>
   api.post('/refresh', { tickers }).then(r => r.data);
 export const refreshUniverseSync = (tickers) =>
   api.post('/refresh/sync', { tickers }).then(r => r.data);
+
+// Screener presets
+export const listPresets = () => api.get('/screener-presets').then(r => r.data);
+export const createPreset = (preset) => api.post('/screener-presets', preset).then(r => r.data);
+export const updatePreset = (id, body) => api.put(`/screener-presets/${id}`, body).then(r => r.data);
+export const deletePreset = (id) => api.delete(`/screener-presets/${id}`);
+
+// Basket
+export const listBasket = () => api.get('/basket').then(r => r.data);
+export const addToBasket = (ticker, note = null) =>
+  api.post('/basket', { ticker, note }).then(r => r.data);
+export const bulkAddToBasket = (tickers) =>
+  api.post('/basket/bulk', { tickers }).then(r => r.data);
+export const removeFromBasket = (ticker) => api.delete(`/basket/${ticker}`);
+export const clearBasket = () => api.delete('/basket');

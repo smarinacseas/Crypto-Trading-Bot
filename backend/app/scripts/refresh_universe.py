@@ -14,7 +14,8 @@ import sys
 
 from backend.app.core.config import settings
 from backend.app.core.database import Base, SessionLocal, engine
-from backend.app.models import stock  # noqa: F401  (register tables)
+from backend.app.models import preferences  # noqa: F401  (register tables)
+from backend.app.models import stock  # noqa: F401
 from backend.app.models import user  # noqa: F401
 from backend.app.services import stock_data
 

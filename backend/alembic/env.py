@@ -19,8 +19,9 @@ from backend.app.core.config import settings  # noqa: E402
 from backend.app.core.database import Base  # noqa: E402
 
 # Import all model modules so their tables are registered on Base.metadata.
-from backend.app.models import user  # noqa: F401,E402
+from backend.app.models import preferences  # noqa: F401,E402
 from backend.app.models import stock  # noqa: F401,E402
+from backend.app.models import user  # noqa: F401,E402
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)

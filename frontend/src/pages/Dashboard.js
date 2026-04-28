@@ -1,17 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ArrowTrendingDownIcon, ArrowTrendingUpIcon, FireIcon } from '@heroicons/react/24/outline';
+import Section from '../components/Section';
+import Stat from '../components/Stat';
+import BasketButton from '../components/BasketButton';
 import { listSectors, listStocks } from '../lib/api';
-import { fmtCompact, fmtPct, pctClass, fmtCurrency } from '../lib/format';
-
-function StatCard({ label, value, sub }) {
-  return (
-    <div className="bg-secondary-800 border border-secondary-700 rounded-lg p-4">
-      <div className="text-xs uppercase tracking-wider text-neutral-400">{label}</div>
-      <div className="text-2xl font-semibold mt-1 text-neutral-100">{value}</div>
-      {sub && <div className="text-xs text-neutral-500 mt-1">{sub}</div>}
-    </div>
-  );
-}
+import { fmtCompact, fmtCurrency, fmtPct, pctClass } from '../lib/format';
 
 export default function Dashboard() {
   const [stocks, setStocks] = useState([]);
@@ -22,110 +16,131 @@ export default function Dashboard() {
     listSectors().then(setSectors).catch(() => setSectors([]));
   }, []);
 
-  const topGainers = useMemo(
-    () => [...stocks]
-      .filter((s) => s.day_change_pct != null)
-      .sort((a, b) => b.day_change_pct - a.day_change_pct)
-      .slice(0, 8),
-    [stocks],
-  );
+  const sortBy = (field, dir = 'desc') =>
+    [...stocks]
+      .filter((s) => s[field] != null)
+      .sort((a, b) => (dir === 'desc' ? b[field] - a[field] : a[field] - b[field]))
+      .slice(0, 8);
 
-  const topLosers = useMemo(
-    () => [...stocks]
-      .filter((s) => s.day_change_pct != null)
-      .sort((a, b) => a.day_change_pct - b.day_change_pct)
-      .slice(0, 8),
-    [stocks],
-  );
+  const topGainers = useMemo(() => sortBy('day_change_pct', 'desc'), [stocks]);
+  const topLosers = useMemo(() => sortBy('day_change_pct', 'asc'), [stocks]);
+  const highShort = useMemo(() => sortBy('short_percent_of_float', 'desc'), [stocks]);
 
-  const highShort = useMemo(
-    () => [...stocks]
-      .filter((s) => s.short_percent_of_float != null)
-      .sort((a, b) => b.short_percent_of_float - a.short_percent_of_float)
-      .slice(0, 8),
-    [stocks],
-  );
+  const totalCap = useMemo(() => stocks.reduce((s, x) => s + (x.market_cap || 0), 0), [stocks]);
+  const avgChange = stocks.length
+    ? stocks.reduce((s, x) => s + (x.day_change_pct || 0), 0) / stocks.length
+    : 0;
 
-  const totalCap = useMemo(
-    () => stocks.reduce((sum, s) => sum + (s.market_cap || 0), 0),
-    [stocks],
-  );
+  const empty = !stocks.length;
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard label="Stocks tracked" value={stocks.length} />
-        <StatCard label="Sectors" value={sectors.length} />
-        <StatCard label="Universe market cap" value={fmtCompact(totalCap)} />
-        <StatCard
-          label="Avg 1d change"
-          value={fmtPct(
-            stocks.length
-              ? stocks.reduce((s, x) => s + (x.day_change_pct || 0), 0) / stocks.length
-              : 0,
-          )}
+    <div className="space-y-4">
+      {/* Top stat strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Stat label="Stocks tracked" value={<span>{stocks.length}</span>} dense />
+        <Stat label="Sectors" value={<span>{sectors.length}</span>} dense />
+        <Stat label="Universe mkt cap" value={fmtCompact(totalCap)} dense />
+        <Stat
+          label="Avg 1D %"
+          value={fmtPct(avgChange)}
+          valueClass={pctClass(avgChange)}
+          dense
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <MoverCard title="Top gainers" rows={topGainers} field="day_change_pct" fmt={fmtPct} colorRow />
-        <MoverCard title="Top losers" rows={topLosers} field="day_change_pct" fmt={fmtPct} colorRow />
-        <MoverCard title="Highest short %" rows={highShort} field="short_percent_of_float" fmt={fmtPct} />
+      {empty && (
+        <div className="bg-amber-950/30 border border-amber-700/50 text-amber-200 rounded-lg p-4 text-sm">
+          No data yet. Head to <Link to="/refresh" className="underline">Refresh</Link> to ingest the default universe.
+        </div>
+      )}
+
+      {/* Movers row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <MoverCard
+          title="Top gainers"
+          subtitle="By daily % change"
+          icon={ArrowTrendingUpIcon}
+          rows={topGainers}
+          field="day_change_pct"
+          fmt={fmtPct}
+          colorRow
+        />
+        <MoverCard
+          title="Top losers"
+          subtitle="By daily % change"
+          icon={ArrowTrendingDownIcon}
+          rows={topLosers}
+          field="day_change_pct"
+          fmt={fmtPct}
+          colorRow
+        />
+        <MoverCard
+          title="Highest short %"
+          subtitle="By short % of float"
+          icon={FireIcon}
+          rows={highShort}
+          field="short_percent_of_float"
+          fmt={fmtPct}
+        />
       </div>
 
-      <div className="bg-secondary-800 border border-secondary-700 rounded-lg overflow-hidden">
-        <div className="px-4 py-3 border-b border-secondary-700">
-          <h3 className="text-sm font-semibold text-neutral-200">Sector performance</h3>
-        </div>
+      {/* Sector table */}
+      <Section title="Sector performance" subtitle="Latest snapshot, ordered by market cap" dense>
         <table className="min-w-full text-sm">
           <thead className="bg-secondary-900">
-            <tr className="text-neutral-400">
+            <tr className="text-neutral-400 text-xs uppercase tracking-wider">
               <th className="px-4 py-2 text-left font-medium">Sector</th>
               <th className="px-4 py-2 text-right font-medium">Stocks</th>
-              <th className="px-4 py-2 text-right font-medium">Avg 1d %</th>
-              <th className="px-4 py-2 text-right font-medium">Total market cap</th>
+              <th className="px-4 py-2 text-right font-medium">Avg 1D %</th>
+              <th className="px-4 py-2 text-right font-medium">Total mkt cap</th>
             </tr>
           </thead>
           <tbody>
             {sectors.map((s) => (
               <tr key={s.sector} className="border-t border-secondary-700/50 hover:bg-secondary-700/30">
-                <td className="px-4 py-2 text-neutral-200">{s.sector}</td>
-                <td className="px-4 py-2 text-right text-neutral-300">{s.stock_count}</td>
-                <td className={`px-4 py-2 text-right ${pctClass(s.avg_day_change_pct)}`}>
+                <td className="px-4 py-2 text-neutral-100">{s.sector}</td>
+                <td className="px-4 py-2 text-right num text-neutral-300">{s.stock_count}</td>
+                <td className={`px-4 py-2 text-right num ${pctClass(s.avg_day_change_pct)}`}>
                   {fmtPct(s.avg_day_change_pct)}
                 </td>
-                <td className="px-4 py-2 text-right text-neutral-300">{fmtCompact(s.total_market_cap)}</td>
+                <td className="px-4 py-2 text-right num text-neutral-300">{fmtCompact(s.total_market_cap)}</td>
               </tr>
             ))}
             {sectors.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-neutral-400">
-                  No data yet. Run a refresh from the sidebar to populate the dashboard.
-                </td>
+                <td colSpan={4} className="px-4 py-6 text-center text-neutral-500 text-sm">—</td>
               </tr>
             )}
           </tbody>
         </table>
-      </div>
+      </Section>
     </div>
   );
 }
 
-function MoverCard({ title, rows, field, fmt, colorRow }) {
+function MoverCard({ title, subtitle, icon: Icon, rows, field, fmt, colorRow }) {
   return (
-    <div className="bg-secondary-800 border border-secondary-700 rounded-lg overflow-hidden">
-      <div className="px-4 py-3 border-b border-secondary-700">
-        <h3 className="text-sm font-semibold text-neutral-200">{title}</h3>
-      </div>
+    <Section
+      title={
+        <span className="flex items-center gap-2">
+          {Icon && <Icon className="h-4 w-4 text-neutral-400" />}
+          {title}
+        </span>
+      }
+      subtitle={subtitle}
+      dense
+    >
       <ul className="divide-y divide-secondary-700/50">
         {rows.map((s) => (
-          <li key={s.ticker} className="px-4 py-2 flex items-center justify-between text-sm">
-            <Link to={`/stocks/${s.ticker}`} className="font-mono text-primary-300 hover:text-primary-200">
+          <li key={s.ticker} className="px-3 py-1.5 flex items-center gap-3 hover:bg-secondary-700/30">
+            <BasketButton ticker={s.ticker} size="xs" />
+            <Link to={`/stocks/${s.ticker}`} className="ticker font-semibold text-primary-300 hover:text-primary-200 w-20">
               {s.ticker}
             </Link>
+            <div className="flex-1 truncate text-xs text-neutral-400">{s.name}</div>
             <div className="text-right">
-              <div className="text-neutral-300">{fmtCurrency(s.price)}</div>
-              <div className={colorRow ? pctClass(s[field]) : 'text-neutral-400'}>
+              <div className="num text-sm text-neutral-200">{fmtCurrency(s.price)}</div>
+              <div className={`num text-xs ${colorRow ? pctClass(s[field]) : 'text-neutral-400'}`}>
                 {fmt(s[field])}
               </div>
             </div>
@@ -133,6 +148,6 @@ function MoverCard({ title, rows, field, fmt, colorRow }) {
         ))}
         {rows.length === 0 && <li className="px-4 py-6 text-center text-neutral-500 text-sm">—</li>}
       </ul>
-    </div>
+    </Section>
   );
 }

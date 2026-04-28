@@ -64,15 +64,33 @@
 
   html {
     font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: 'cv11', 'ss01';
   }
-  
+
   body {
     @apply bg-secondary-900 text-neutral-100;
+    -webkit-font-smoothing: antialiased;
   }
-  
+
   /* Always use dark mode */
   * {
     color-scheme: dark;
+  }
+
+  /* Terminal/quant feel: tabular monospace numerics. */
+  .num {
+    font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Menlo', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+  }
+
+  .ticker {
+    font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Menlo', ui-monospace, monospace;
+    letter-spacing: 0.02em;
+  }
+
+  .section-label {
+    @apply text-[10px] uppercase tracking-[0.14em] text-neutral-500 font-medium;
   }
 }
 

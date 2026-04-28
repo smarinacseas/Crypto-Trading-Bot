@@ -20,6 +20,7 @@ from backend.app.core.config import settings
 from backend.app.core.database import Base, engine
 
 # Import models so their tables register with Base.metadata before create_all.
+from backend.app.models import preferences  # noqa: F401
 from backend.app.models import stock  # noqa: F401
 from backend.app.models import user  # noqa: F401
 
