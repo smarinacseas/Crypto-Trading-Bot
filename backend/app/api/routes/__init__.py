@@ -1,9 +1,10 @@
-# Routes package initialization 
 from fastapi import APIRouter
-from .portfolio import router as portfolio_router
 
-# Create main router
+from .stocks import router as stocks_router
+from .sectors import router as sectors_router
+from .refresh import router as refresh_router
+
 router = APIRouter()
-
-# Include all route modules
-router.include_router(portfolio_router, tags=["portfolio"]) 
+router.include_router(stocks_router, tags=["stocks"])
+router.include_router(sectors_router, tags=["sectors"])
+router.include_router(refresh_router, tags=["refresh"])

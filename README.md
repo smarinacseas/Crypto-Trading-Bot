@@ -1,258 +1,109 @@
-# 🚀 Crypto Trading Bot
+# Stock Dashboard
 
-<div align="center">
-  <img src="https://img.shields.io/badge/Python-3.12-blue.svg" alt="Python">
-  <img src="https://img.shields.io/badge/FastAPI-0.27.1-00d2d3.svg" alt="FastAPI">
-  <img src="https://img.shields.io/badge/React-18.2.0-61dafb.svg" alt="React">
-  <img src="https://img.shields.io/badge/WebSocket-Enabled-green.svg" alt="WebSocket">
-  <img src="https://img.shields.io/badge/Status-Active%20Development-yellow.svg" alt="Status">
-</div>
+A personal-use stock screener and dashboard. Pulls market data, fundamentals, and short interest from Yahoo Finance, stores point-in-time snapshots in SQLite, and surfaces them through a sleek React UI with live TradingView charts.
 
-## Overview
+Built to be the foundation for a sentiment + ML feature-engineering and backtesting workflow (later phases).
 
-A full-stack cryptocurrency trading platform built with React and FastAPI. The project includes a modern web interface, real-time data processing, and comprehensive trading infrastructure with support for multiple exchanges.
+## What's in here
 
-## Tech Stack
+**Backend** (FastAPI + SQLAlchemy)
+- yfinance ingest of fundamentals, market metrics, short interest, and 2y daily bars
+- Point-in-time snapshots → screener queries always read the most recent
+- Sector aggregates, per-stock detail, daily bar series
+- SQLite by default, Postgres-ready (single env var swap)
+- Alembic scaffolded for migrations
 
-**Frontend**
+**Frontend** (React + Tailwind + shadcn UI)
+- Dashboard: top movers, highest-short, sector performance table
+- Screener: filter by sector / market cap / P/E / short %, sort by any column, sector-grouped view
+- Stock detail: live TradingView chart + 18-metric fundamentals grid + daily close history
+- Refresh control panel for ingesting new data
 
-- React 18 with TailwindCSS
-- Custom UI components with Radix primitives
-- Chart.js for data visualization
-- TradingView widgets
+**Auth is intentionally stubbed out** for personal/local use — turn it on later via a single env var (see `backend/app/core/auth.py`).
 
-**Backend**
-
-- FastAPI with automatic API documentation
-- SQLAlchemy ORM with async support
-- JWT authentication
-- WebSocket for real-time communication
-
-**Trading Infrastructure**
-
-- HyperLiquid SDK integration
-- CCXT library for multi-exchange support
-- Real-time data streams from Binance
-- Technical analysis with TA-Lib and pandas
-
-## Current Features
-
-### ✅ **Web Application**
-
-- React frontend with trading interface
-- FastAPI backend with REST API
-- User authentication and registration
-- Database models for strategies and backtests
-- WebSocket infrastructure for real-time data
-
-### ✅ **Trading Backend**
-
-- Multi-exchange integration (HyperLiquid, MEXC, Binance)
-- Real-time WebSocket data streams
-- Technical indicators (SMA, support/resistance)
-- Order execution engines
-- Risk management tools
-
-## 🚧 In Development
-
-- **Frontend Integration**: Connecting real-time data to React components
-- **Trading UI**: Order placement and portfolio management interface
-- **Paper Trading**: Risk-free trading simulation
-- **Strategy Backtesting**: Historical performance testing with visual results
-- **Live Dashboard**: Real-time P&L and portfolio metrics
-
-## Quick Start
-
-### Prerequisites
-
-- Python 3.11+ (recommended: 3.12)
-- Node.js 18+
-
-### Installation
-
-1. **Clone the repository**
-
-   ```bash
-   git clone https://github.com/yourusername/crypto-trading-bot.git
-   cd crypto-trading-bot
-   ```
-
-2. **Set up Python environment**
-
-   ```bash
-   # Create a virtual environment (e.g. 'quant')
-   python3 -m venv quant
-
-   # Activate virtual environment
-   source quant/bin/activate  # Windows: quant\Scripts\activate
-
-   # Install dependencies
-   pip install -r backend/requirements.txt
-   ```
-
-3. **Install frontend dependencies**
-
-   ```bash
-   cd frontend
-   npm install
-   cd ..
-   ```
-
-4. **Set up environment variables (optional)**
-
-   ```bash
-   # Copy the example environment file
-   cp .env.example .env
-
-   # Edit .env with your API credentials for full trading features
-   ```
-
-### Running the Application
-
-1. **Start backend (Terminal 1)**
-
-   ```bash
-   # Activate virtual environment
-   source quant/bin/activate
-
-   # Start FastAPI server
-   uvicorn backend.app.main:app --reload
-   ```
-
-2. **Start frontend (Terminal 2)**
-
-   ```bash
-   cd frontend
-   npm start
-   ```
-
-3. **Access the application**
-   - Frontend: http://localhost:3000
-   - API Documentation: http://127.0.0.1:8000/docs
-   - Interactive API: http://127.0.0.1:8000/redoc
-
-### Optional: Trading Features
-
-For full trading capabilities, add API credentials to `.env`:
+## Quick start
 
 ```bash
-COINBASE_API_KEY=your_key
-COINBASE_API_SECRET=your_secret
-MEXC_API_KEY=your_key
-MEXC_SECRET_KEY=your_secret
-HYPERLIQUID_SECRET_KEY=your_private_key
-```
+# Backend
+python3 -m venv quant
+source quant/bin/activate                 # Windows: quant\Scripts\activate
+pip install -r backend/requirements.txt
+cp .env.example .env
 
-Run trading services:
+# Run from repo root (imports are absolute)
+uvicorn backend.app.main:app --reload     # http://127.0.0.1:8000/docs
+```
 
 ```bash
-# Real-time data streams
-python -m backend.app.scripts.binance_streaming_entry
-
-# Technical indicators
-python -m backend.app.indicators.indicators
+# Frontend (new terminal)
+cd frontend
+npm install
+npm start                                 # http://localhost:3000
 ```
 
-## API Endpoints
+## Populating the screener
 
-### Authentication
-
-- `POST /auth/register` - User registration
-- `POST /auth/jwt/login` - Login
-- `GET /users/me` - User profile
-
-### Trading
-
-- `GET /api/strategies` - Manage trading strategies
-- `POST /api/backtests` - Run backtests
-- `GET /api/portfolio` - Portfolio data
-- `POST /api/paper-trading` - Paper trading
-
-Full documentation: http://127.0.0.1:8000/docs
-
-## Project Structure
-
-```
-├── backend/
-│   ├── app/
-│   │   ├── api/          # API routes
-│   │   ├── core/         # Auth & config
-│   │   ├── models/       # Database models
-│   │   ├── data_import/  # Exchange data
-│   │   ├── execution/    # Trading engines
-│   │   └── indicators/   # Technical analysis
-│   └── requirements.txt
-├── frontend/
-│   ├── src/
-│   │   ├── components/   # React components
-│   │   ├── pages/        # App pages
-│   │   └── utils/        # Utilities
-│   └── package.json
-```
-
-## Development
+The DB starts empty. Refresh either via the UI (`/refresh`) or the CLI:
 
 ```bash
-# Backend development with auto-reload
-source quant/bin/activate
-uvicorn backend.app.main:app --reload
+# Default universe (backend/app/data/sp500.txt)
+python -m backend.app.scripts.refresh_universe
 
-# Frontend development
-cd frontend && npm start
+# Specific tickers
+python -m backend.app.scripts.refresh_universe AAPL MSFT NVDA
 
-# Run individual modules
-python -m backend.app.indicators.indicators
-python -m backend.app.scripts.binance_streaming_entry
+# Custom file
+python -m backend.app.scripts.refresh_universe --file my_watchlist.txt
 ```
 
-### Troubleshooting
+For daily EOD refresh, schedule it:
 
-**Installation Issues:**
+```cron
+0 22 * * 1-5  cd /path/to/repo && /path/to/venv/bin/python -m backend.app.scripts.refresh_universe
+```
 
-- Ensure Python 3.11+ is installed: `python3 --version`
-- Update pip if needed: `pip install --upgrade pip`
-- If packages fail to install, try: `pip install --force-reinstall <package-name>`
+## Environment
 
-**Running Issues:**
+All configuration lives in `.env` (see `.env.example`). The two you'll most likely touch:
 
-- Always activate virtual environment: `source quant/bin/activate`
-- Verify uvicorn is installed: `which uvicorn`
-- Check API docs at: http://127.0.0.1:8000/docs
+- `DATABASE_URL` — defaults to SQLite. Set to a Postgres URL like `postgresql+psycopg://user:pass@host:5432/db` to migrate.
+- `DEFAULT_UNIVERSE_FILE` — point at your own ticker list.
 
-**npm Security Warnings:**
+## Switching to Postgres
 
-- Development dependency warnings are normal and don't affect functionality
-- Do NOT run `npm audit fix --force` as it will break the application
+1. Set `DATABASE_URL=postgresql+psycopg://...` in `.env`.
+2. Generate the initial migration: `alembic -c backend/alembic.ini revision --autogenerate -m "initial"`.
+3. Apply: `alembic -c backend/alembic.ini upgrade head`.
+4. Remove the `Base.metadata.create_all(...)` line from `backend/app/main.py` so alembic owns the schema.
+
+The async-driver mapping is automatic.
 
 ## Roadmap
 
-**Phase 1: Core Platform** ✅
+- [x] Phase 1: pivot from crypto to stocks; foundation models + ingest
+- [x] Phase 2: screener UI + sector dashboard + stock detail with live chart
+- [ ] Phase 3: sentiment ingestion (Reddit, StockTwits, news) feeding `sentiment_score`
+- [ ] Phase 4: feature engineering + sklearn ML backtests with walk-forward eval, equity curves, feature importance
 
-- FastAPI backend with authentication
-- React frontend
-- Database integration
-- WebSocket infrastructure
+## Project layout
 
-**Phase 2: Integration** 🚧
+```
+backend/
+  app/
+    api/routes/         # FastAPI routers (stocks, sectors, refresh)
+    core/               # config, database, auth stub
+    models/             # SQLAlchemy: Stock, StockSnapshot, StockBar, Watchlist
+    schemas/            # Pydantic request/response models
+    services/           # stock_data (yfinance ingest) + screener (DB queries)
+    scripts/            # refresh_universe CLI
+    data/sp500.txt      # default ticker universe
+  alembic/              # migrations (scaffolded; no revisions yet)
+  requirements.txt
+frontend/
+  src/
+    pages/              # Dashboard, Screener, StockDetail, Sectors, Refresh
+    components/         # Layout, TradingViewWidget, shadcn UI primitives
+    lib/api.js          # axios client
+```
 
-- Frontend-backend data integration
-- Real-time trading interface
-- Paper trading system
-- Strategy backtesting UI
-
-**Phase 3: Advanced Features** 🔄
-
-- Machine learning integration
-- Advanced order types
-- Risk management systems
-- Multi-timeframe analysis
-
-## License
-
-MIT License - see [LICENSE](LICENSE) file for details.
-
----
-
-<div align="center">
-  <p>⭐ Star this repository if you find it useful!</p>
-</div>
+See `CLAUDE.md` for the architecture deep-dive aimed at AI assistants working on this repo.

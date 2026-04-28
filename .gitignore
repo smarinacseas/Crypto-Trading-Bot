@@ -61,15 +61,11 @@ solana-trading-bot/venv/
 
 # Development/troubleshooting files
 .cursorrules
-CLAUDE.md
 PATH_STRUCTURE.md
-SUPABASE_MCP_SETUP.md
 **/BUGFIX-*.md
 **/TEST-REPORT.md
 **/*-test-error.png
 **/*-screenshot.png
-test_supabase_connection.py
-simple_supabase_test.py
 
 # Node.js dependencies
 node_modules/
@@ -105,8 +101,7 @@ frontend/dist/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
-# Backend configuration and sensitive files
-backend/app/core/config.py
+# Backend runtime files
 backend/.env
 backend/app/.env
 backend/data/

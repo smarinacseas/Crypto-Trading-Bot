@@ -4,92 +4,111 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Full-stack cryptocurrency trading platform with a FastAPI backend and React frontend. The backend exposes REST + WebSocket APIs for authentication, strategy management, backtesting, paper trading, real-time exchange data, and live order execution against multiple exchanges.
+Personal-use **stock screener + dashboard** with:
+- **Backend** (FastAPI) — yfinance-backed ingest, SQLAlchemy models for stocks/snapshots/daily bars, REST API for screener filters, sector aggregates, and stock detail.
+- **Frontend** (React + Tailwind + shadcn) — sector-grouped screener table, dashboard with movers + sector performance, per-stock detail page embedding the TradingView live chart.
+
+The repo was originally a crypto trading bot; that codebase was wholesale removed in the rewrite. If you find references to ccxt, Binance, HyperLiquid, paper trading, etc., they are leftovers — flag and remove.
+
+**Roadmap (not yet built, but the data model is shaped for it):**
+- Phase 3: sentiment ingestion (Reddit / StockTwits / news) → fills `StockSnapshot.sentiment_score`.
+- Phase 4: feature engineering + ML backtests against the daily bar history.
 
 ## Development Commands
 
 ### Backend
 ```bash
-# Create venv (the project's permission allowlist references one named "quant")
 python3 -m venv quant
 source quant/bin/activate
-
 pip install -r backend/requirements.txt
 
-# Run the API with hot reload (always run from the repo root because imports are
-# absolute, e.g. `from backend.app.api.routes import ...`)
-uvicorn backend.app.main:app --reload
-# Docs: http://127.0.0.1:8000/docs
+# Run from the repo root — imports are absolute (backend.app.*).
+uvicorn backend.app.main:app --reload   # http://127.0.0.1:8000/docs
 ```
 
 ### Frontend
 ```bash
 cd frontend
 npm install
-npm start          # dev server at http://localhost:3000 (proxies /api -> :8000)
-npm run build      # production build
-npm test           # react-scripts (Jest) test runner
+npm start                                 # http://localhost:3000 (proxies /api -> :8000)
+npm run build
+npm test                                  # react-scripts (Jest); no tests written yet
 ```
 
-There is currently no Python test suite or linter configured — `npm test` is the only test command.
-
-### Running individual backend modules
-All scripts use absolute `backend.app.*` imports and must be invoked as modules from the repo root:
+### Populating data
+The screener is empty until you run a refresh. Either:
 ```bash
-python -m backend.app.scripts.binance_streaming_entry   # interactive Binance WS streams
-python -m backend.app.indicators.indicators              # SMA + support/resistance demo
-python -m backend.app.data_import.coinbase.cb_historical # historical OHLCV pull
-python -m backend.app.scripts.seed_strategies            # populate sample strategies
+# CLI (recommended — schedule via cron for daily EOD refresh)
+python -m backend.app.scripts.refresh_universe                    # default universe
+python -m backend.app.scripts.refresh_universe AAPL MSFT NVDA     # specific tickers
+python -m backend.app.scripts.refresh_universe --file my_list.txt
+
+# Or use the UI: navigate to /refresh in the dashboard.
 ```
+
+The default universe lives in `backend/app/data/sp500.txt` (one ticker per line, `#` comments allowed).
+
+There is no Python test suite or linter configured.
 
 ## High-Level Architecture
 
+### Data flow
+```
+yfinance ─┐
+          ├─► services/stock_data.py ──► stocks / stock_snapshots / stock_bars (SQLite)
+                                                 │
+                                                 ▼
+                                  services/screener.py (latest-snapshot joins)
+                                                 │
+                                                 ▼
+                                api/routes/{stocks,sectors,refresh}.py
+                                                 │
+                                                 ▼
+                                       React frontend (axios via lib/api.js)
+```
+
+The screener never calls yfinance directly — routes only read the DB. Refresh is the only path that hits the network, kicked off via the CLI script or `POST /api/refresh`.
+
 ### Backend layout (`backend/app/`)
-- `main.py` — FastAPI entrypoint. Registers routers under these prefixes: `/api`, `/ws`, `/api/strategies`, `/api/backtests`, `/api/paper-trading`, `/api/auth` (Supabase), and `/auth/jwt` + `/auth` + `/users` (FastAPI-Users). Creates SQLAlchemy tables on startup (both sync and async engines).
-- `api/routes.py` — legacy "trading actions" router mounted at `/api` (balance, order, open-orders, cancel-orders, trade-cycle, kill-switch). Note: this file lives alongside the `api/routes/` package; both are imported by `main.py`.
-- `api/routes/` — newer per-feature routers: `auth.py`, `portfolio.py`, `strategies.py`, `backtests.py`, `paper_trading.py`, `websocket.py`.
-- `core/` — cross-cutting infrastructure:
-  - `database.py` — dual SQLAlchemy engines (sync `engine` + async `async_engine`). The async URL is derived by rewriting `sqlite://` to `sqlite+aiosqlite://`.
-  - `auth.py` — FastAPI-Users JWT backend with `int` user IDs and a custom `UserManager.create` that handles `first_name`/`last_name`.
-  - `supabase_auth.py` + `supabase_client.py` — alternative Supabase JWT verification path. `get_current_user_hybrid` accepts either auth method, which is what `/api/auth/me` uses.
-  - `config.py` — Pydantic settings. **Gitignored** (see `.gitignore`); must be created locally and reads `.env`.
-- `models/` — SQLAlchemy models: `user`, `strategy`, `backtest`, `paper_trading`. All inherit `Base` from `core.database`. They must be imported in `main.py` to register with the metadata before `create_all`.
-- `schemas/` — Pydantic request/response models matching the routers.
-- `data_import/binance/` — async WebSocket streams. `base_stream.BaseBinanceStream` is the abstract base (URI assembly, message parsing for trades / mark price / liquidations, US-Central time formatting). Concrete subclasses: `standard_stream`, `aggregated_stream`, `funding_rates_stream`, `liquidations_stream`.
-- `data_import/coinbase/cb_historical.py` — CCXT-based historical OHLCV with CSV caching in `output_files/`.
-- `execution/` — order routing:
-  - `execute_ccxt.Executor` — generic CCXT wrapper. Reads `{EXCHANGE}_API_KEY` / `{EXCHANGE}_SECRET_KEY` from env and dynamically loads `ccxt.<exchange_id>`.
-  - `execute_hyperliquid.HyperLiquidExecutor` — native HyperLiquid SDK integration.
-  - The `/api/order` route's `get_executor()` dispatches between the two by exchange name.
-- `indicators/indicators.py` — SMA + support/resistance, pulls historical data through `cb_historical`.
-- `backtesting/engine.py` — `BacktestEngine` runs strategies over historical OHLCV (currently simulated/random walk in `load_market_data`; the real data source is a TODO). Indicators (`SMA`, `EMA`, `RSI`, `BB`, `ATR`) and entry/exit conditions are read from `Strategy.indicators` / `entry_conditions` / `exit_conditions` (JSON columns) and evaluated via `_evaluate_condition` (a guarded `eval` — be careful when extending). Caps concurrent trades at 3.
-- `paper_trading/engine.py` — `PaperTradingEngine` consumes `services.market_data.MarketDataService` ticks and reuses the backtest engine's signal logic for live simulation.
-- `services/market_data.py` — async market data service (CCXT + WebSockets) used by paper trading.
-- `websocket_manager.py` — bridges Binance streams to browser WebSocket clients. `WebSocketManager` owns the set of FastAPI `WebSocket` connections and a registry of `asyncio.Task`s (one per stream). `BroadcastingStream` wraps a `BaseBinanceStream` subclass and **monkey-patches its `handle_connection`** to reformat parsed messages into frontend-friendly JSON (`type`, `symbol`, `side`, etc.) before broadcasting. The browser controls streams by sending `{action: "start_stream"|"stop_stream"|"get_active_streams", stream_type, symbol}` to `/ws/ws`.
+- `main.py` — FastAPI app, single `lifespan` that calls `Base.metadata.create_all` (SQLite-friendly; swap for alembic when you graduate to Postgres).
+- `core/config.py` — pydantic-settings, reads `.env`. **All env vars listed in `.env.example`.**
+- `core/database.py` — sync + async engines. The async URL is auto-derived: `sqlite:///` → `sqlite+aiosqlite:///`, `postgresql://` → `postgresql+psycopg://`. To switch DBs, change only `DATABASE_URL`.
+- `core/auth.py` — **stub**. Returns a fixed local user when `AUTH_ENABLED=false`. To turn on real auth, flip the env var and replace the body of `get_current_user` (see comments in the file). All routes already `Depends(get_current_user)`, so no signatures need to change.
+- `models/stock.py` — three core tables + a watchlist join table:
+  - `Stock`: ticker, name, sector, industry, exchange (slow-changing).
+  - `StockSnapshot`: per-refresh point-in-time row (price, volume, market_cap, short interest, valuation ratios, beta, sentiment_score). Unique on `(stock_id, as_of)`.
+  - `StockBar`: daily OHLCV. Unique on `(stock_id, bar_date)`.
+- `services/stock_data.py` — yfinance ingest. `_get`/`_to_float` defensively pull sparse yfinance fields. `refresh_ticker` upserts metadata + appends a snapshot + upserts 2y of daily bars. `upsert_universe` is the batch loop with rate-limit sleeps.
+- `services/screener.py` — the join that powers the screener. `_latest_snapshot_subquery` produces per-stock `max(as_of)`; `list_stocks` aliases `StockSnapshot` and applies whitelisted filters/sorts. **The `_SORT_FIELDS` dict is the only source of truth for what the screener can sort by — extend there to expose new columns.**
+- `api/routes/stocks.py` — `/api/stocks` (screener), `/api/stocks/{ticker}` (detail with latest snapshot), `/api/stocks/{ticker}/bars`.
+- `api/routes/sectors.py` — sector aggregates (count, avg day change, total market cap).
+- `api/routes/refresh.py` — `/api/refresh` (background task) and `/api/refresh/sync` (blocking; small lists only).
+- `scripts/refresh_universe.py` — CLI entrypoint, suitable for cron.
+- `alembic/` — migration infrastructure scaffolded but no revisions yet. Run `alembic -c backend/alembic.ini revision --autogenerate -m "initial"` when you migrate to Postgres.
 
 ### Frontend layout (`frontend/src/`)
-- React 18 + react-router-dom v6, TailwindCSS, Radix UI primitives, Chart.js / Recharts, TradingView widgets, Supabase JS client, axios.
-- `App.js` — all routes are gated on `useAuth().isAuthenticated`; unauthenticated users see `Landing`. `/dashboard` renders `ModernDashboard` (the classic one is at `/dashboard/classic`).
-- `contexts/AuthContext.js` — the source of truth for auth state (uses Supabase).
-- `pages/` — one file per top-level route (`Trading`, `DataStreams`, `Indicators`, `Strategies`, `Backtesting`, `PaperTrading`, `Account`, etc.).
-- `components/ui/` — note the duplication: capitalized `.js` files (`Button.js`, `Card.js`, ...) and lowercase shadcn-style `.jsx` (`button.jsx`, `card.jsx`, ...). Prefer the `.jsx` shadcn components for new work; check existing usage in the page you're editing before picking.
-- `package.json` sets `"proxy": "http://localhost:8000"`, so `fetch('/api/...')` from the dev server hits the backend without CORS.
-
-### Authentication has two parallel paths
-The codebase supports **both** local FastAPI-Users (JWT, SQLAlchemy `User` table) and Supabase-issued JWTs simultaneously:
-- Local: `POST /auth/jwt/login`, `POST /auth/register`, dependency `current_active_user`.
-- Supabase: `Authorization: Bearer <supabase_jwt>`, dependency `require_current_user_from_supabase`.
-- Hybrid: `require_current_user_hybrid` (used by `/api/auth/me`) accepts either.
-
-When adding a protected endpoint, decide which dependency to use — most newer code uses `current_active_user`, while user-profile/Supabase-aware endpoints use the hybrid.
+- `App.js` — five top-level routes: `/` (Dashboard), `/screener`, `/sectors`, `/watchlist`, `/refresh`, plus `/stocks/:ticker` for detail. No auth gates.
+- `lib/api.js` — axios client; baseURL is `/api` (proxied by CRA in dev to `:8000`). All backend calls go through here.
+- `lib/format.js` — display formatters (`fmtCompact`, `fmtPct`, `pctClass` for green/red coloring, etc.). Used everywhere; extend here rather than inlining Intl calls.
+- `components/Layout.js` — sidebar nav + top bar. Static `navigation` array drives the menu.
+- `components/TradingViewWidget.js` — accepts `symbol` prop (e.g. `"NASDAQ:AAPL"` or just `"AAPL"`). Uses `useId` for unique container ids so multiple instances on a page don't collide.
+- `components/ui/` — shadcn-style primitives (lowercase `.jsx`). Only what's actually imported is kept.
+- `pages/`:
+  - `Dashboard.js` — overview stats + top movers + sector table.
+  - `Screener.js` — the centerpiece. Sector-groupable filterable table. Filter state lives in `useState`; changes refetch via `listStocks`.
+  - `StockDetail.js` — TradingView live chart + 18-stat fundamentals grid + recharts daily close line.
+  - `Sectors.js` — sector breakdown cards.
+  - `Refresh.js` — UI for `POST /api/refresh` (async + sync variants).
+  - `Watchlist.js` — placeholder until phase 3.
 
 ## Conventions and gotchas
 
-- **Always run Python from the repo root.** Imports are absolute (`backend.app.…`), so `cd backend && python app/main.py` will fail.
-- **`backend/app/core/config.py` is gitignored** along with `backend/data/`, `backend/logs/`, `*.csv`, `*.db`. Don't commit any of these. Settings are loaded from `.env` (see `.env.example` for the full list: Supabase keys, `SECRET_KEY`, `ENCRYPTION_KEY`, `CORS_ORIGINS`, exchange API keys).
-- **Exchange credentials follow `{EXCHANGE}_API_KEY` / `{EXCHANGE}_SECRET_KEY`** (uppercased exchange name). HyperLiquid is special: `HYPERLIQUID_SECRET_KEY` only.
-- **CSV/data file naming:** stream outputs use `binance_{stream_type}_{symbol}.csv` (set in `WebSocketManager.start_binance_stream`); historical OHLCV uses `{symbol_with_underscores}_{timeframe}_{weeks}w.csv` (e.g., `BTC_USD_6h_10w.csv`).
-- **Models must be imported in `main.py`** before `Base.metadata.create_all` for tables to be created — this is why `main.py` does dummy `import` statements for `strategy`, `backtest`, `paper_trading`.
-- **`BacktestEngine._evaluate_condition` calls `eval()`** on user-supplied condition strings (with a denylist of `import`, `exec`, `__`, etc.). Treat any path that builds those strings from user input as a security boundary.
-- **Two routes packages coexist:** `backend/app/api/routes.py` (file, legacy executor endpoints) and `backend/app/api/routes/` (package, newer routers). Don't delete one assuming it's a duplicate — both are imported in `main.py`.
-- **`npm audit fix --force`** is documented in the README as known-broken; don't run it.
+- **Always run Python from the repo root.** Imports are absolute (`from backend.app...`); `cd backend && python ...` will fail.
+- **Auth stub is the only auth.** Don't import `fastapi_users`/`supabase` — they were removed. To enable multi-user mode, see the inline comment in `core/auth.py`. The local user always has `id=1`, `email="local@localhost"`.
+- **Sort/filter additions touch two places.** When adding a screener column, update `services/screener.py::_SORT_FIELDS` (backend) and `pages/Screener.js::COLUMNS` (frontend). Anything not whitelisted is silently ignored.
+- **Snapshots are append-only by `as_of`.** `refresh_ticker` always inserts a new `StockSnapshot`; the screener reads the latest. Don't UPDATE existing snapshots — historical snapshots are how phase 4 ML backtests get point-in-time features.
+- **DB switch is a config change.** Change `DATABASE_URL` in `.env` and the engine + async-engine layer adapt automatically (`sqlite+aiosqlite` ↔ `postgresql+psycopg`). Don't add SQLite-specific SQL.
+- **yfinance is sparse and rate-limited.** Many fields come back `None`. Always guard with `_to_float`/`_get`. The `REFRESH_RATE_LIMIT_SECONDS` setting throttles the loop.
+- **Snapshot uniqueness is `(stock_id, as_of)`** — running two refreshes within the same second on the same ticker will conflict. In practice not a problem; if it bites, add jitter.
+- **Tables are auto-created on startup.** Fine for SQLite, but when moving to Postgres switch to alembic-managed migrations and remove the `Base.metadata.create_all` call in `main.py`.
+- **TradingView symbols need an exchange prefix** (`NASDAQ:AAPL`, `NYSE:KO`). `StockDetail.js` defaults to `NASDAQ:` if yfinance's `exchange` field doesn't suggest NYSE.

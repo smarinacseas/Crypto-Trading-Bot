@@ -1,40 +1,39 @@
+"""FastAPI app entrypoint.
+
+Run from the repo root:
+    uvicorn backend.app.main:app --reload
+Docs at http://127.0.0.1:8000/docs
+
+Tables are created on startup via ``Base.metadata.create_all`` — this is fine
+for SQLite. When migrating to Postgres, swap to alembic-managed migrations
+(``alembic -c backend/alembic.ini upgrade head``) and remove the create_all
+call below.
+"""
+from contextlib import asynccontextmanager
+
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from backend.app.api.routes import router as api_router
-from backend.app.api.routes.websocket import router as websocket_router
-from backend.app.api.routes.portfolio import router as portfolio_router
-from backend.app.api.routes.strategies import router as strategies_router
-from backend.app.api.routes.backtests import router as backtests_router
-from backend.app.api.routes.paper_trading import router as paper_trading_router
-from backend.app.api.routes.auth import router as supabase_auth_router
-from backend.app.core.auth import fastapi_users, auth_backend
-from backend.app.schemas.user import UserRead, UserCreate
 from backend.app.core.config import settings
-from backend.app.models.user import Base
-from backend.app.models import strategy  # Import to register models
-from backend.app.models import backtest  # Import to register models
-from backend.app.models import paper_trading  # Import to register models
-from backend.app.core.database import engine, async_engine
-from dotenv import load_dotenv
+from backend.app.core.database import Base, engine
 
-# Run the following command to start the API on local host:
-# uvicorn backend.app.main:app --reload
-# Navigate to http://127.0.0.1:8000/docs to see the API documentation
+# Import models so their tables register with Base.metadata before create_all.
+from backend.app.models import stock  # noqa: F401
+from backend.app.models import user  # noqa: F401
 
-load_dotenv()  # This will load variables from a .env file into the environment
+load_dotenv()
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Crypto Trading Bot API")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    Base.metadata.create_all(bind=engine)
+    yield
 
-# Create async tables on startup
-@app.on_event("startup")
-async def create_async_tables():
-    async with async_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
 
-# CORS middleware
+app = FastAPI(title="Stock Dashboard API", lifespan=lifespan)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -43,35 +42,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
 app.include_router(api_router, prefix="/api")
-app.include_router(websocket_router, prefix="/ws")
-app.include_router(portfolio_router, prefix="/api")
-app.include_router(strategies_router, prefix="/api", tags=["strategies"])
-app.include_router(backtests_router, prefix="/api/backtests", tags=["backtests"])
-app.include_router(paper_trading_router, prefix="/api/paper-trading", tags=["paper-trading"])
-app.include_router(supabase_auth_router, prefix="/api/auth", tags=["supabase-auth"])
 
-# Authentication routes
-app.include_router(
-    fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"]
-)
-app.include_router(
-    fastapi_users.get_register_router(UserRead, UserCreate),
-    prefix="/auth",
-    tags=["auth"],
-)
-app.include_router(
-    fastapi_users.get_users_router(UserRead, UserRead),
-    prefix="/users",
-    tags=["users"],
-)
 
-# Root endpoint
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to the Solana Trading Bot API"}
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    return {"name": "Stock Dashboard API", "auth_enabled": settings.AUTH_ENABLED}
