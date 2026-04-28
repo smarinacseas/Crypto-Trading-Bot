@@ -1,8 +1,10 @@
 """Manual refresh endpoint — kicks off a background ingest job.
 
-For personal use this is the easiest control: hit ``POST /api/refresh`` with
-a list of tickers (or none, to use the default universe file). For periodic
-refresh use the CLI: ``python -m backend.app.scripts.refresh_universe``.
+Accepts either ticker lists, named universes (curated files in
+``backend/app/data``), or both. They're combined + deduped before ingest.
+
+For periodic refresh use the CLI:
+    python -m backend.app.scripts.refresh_universe
 """
 from typing import List, Optional
 
@@ -14,22 +16,26 @@ from ...core.auth import CurrentUser, get_current_user
 from ...core.config import settings
 from ...core.database import SessionLocal, get_db
 from ...schemas.stock import RefreshResponse
-from ...services import stock_data
+from ...services import stock_data, universes as universes_service
 
 router = APIRouter()
 
 
 class RefreshRequest(BaseModel):
-    tickers: Optional[List[str]] = None  # None => load from DEFAULT_UNIVERSE_FILE
+    tickers: Optional[List[str]] = None
+    universes: Optional[List[str]] = None  # universe names (e.g. ["popular", "high_short"])
 
 
-def _resolve_tickers(req: RefreshRequest) -> List[str]:
-    if req.tickers:
-        return [t.upper() for t in req.tickers]
-    try:
-        return stock_data.load_universe_file(settings.DEFAULT_UNIVERSE_FILE)
-    except FileNotFoundError:
-        return []
+def _resolve(req: RefreshRequest) -> List[str]:
+    # Explicit args win — only fall back to default universe if both are empty.
+    if not req.tickers and not req.universes:
+        try:
+            from pathlib import Path
+            default_name = Path(settings.DEFAULT_UNIVERSE_FILE).stem
+            return universes_service.load_universe(default_name)
+        except FileNotFoundError:
+            return []
+    return universes_service.resolve_tickers(req.universes, req.tickers)
 
 
 def _refresh_in_background(tickers: List[str]) -> None:
@@ -52,7 +58,7 @@ def refresh(
     The response numbers reflect *queued* counts; check logs (or the screener)
     to confirm completion.
     """
-    tickers = _resolve_tickers(req)
+    tickers = _resolve(req)
     background_tasks.add_task(_refresh_in_background, tickers)
     return RefreshResponse(
         requested=len(tickers),
@@ -69,7 +75,7 @@ def refresh_sync(
     _: CurrentUser = Depends(get_current_user),
 ):
     """Synchronous refresh — blocks until done. Use for small ticker lists only."""
-    tickers = _resolve_tickers(req)
+    tickers = _resolve(req)
     summary = stock_data.upsert_universe(db, tickers)
     return RefreshResponse(
         requested=summary.requested,

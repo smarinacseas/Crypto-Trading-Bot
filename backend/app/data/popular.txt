@@ -1,6 +1,6 @@
-# Default universe — a curated subset of large/popular tickers across sectors.
-# Replace with a full S&P 500 list (or your own watchlist) when ready.
-# One ticker per line, '#' for comments.
+# label: Popular
+# description: Curated mega/large-cap mix across sectors. Good starter universe.
+# One ticker per line. Lines starting with '#' are ignored.
 
 # Mega-cap tech
 AAPL
@@ -72,13 +72,3 @@ HON
 NFLX
 T
 VZ
-
-# High-short-interest meme/retail favorites (for the screener to surface)
-GME
-AMC
-BBBY
-CVNA
-HOOD
-COIN
-RIVN
-LCID

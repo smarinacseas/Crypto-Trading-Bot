@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -25,7 +25,9 @@ import {
   fmtVolume,
   pctClass,
 } from '../lib/format';
+import { useNavigate } from 'react-router-dom';
 import { useBasket } from '../contexts/BasketContext';
+import AddTickerBox from '../components/screener/AddTickerBox';
 import FilterPanel from '../components/screener/FilterPanel';
 import PresetBar from '../components/screener/PresetBar';
 import StockRow from '../components/screener/StockRow';
@@ -79,24 +81,33 @@ export default function Screener() {
   const [savedSnapshot, setSavedSnapshot] = useState({ filters: DEFAULT_FILTERS, sort: DEFAULT_SORT });
 
   const { bulkAdd } = useBasket();
+  const navigate = useNavigate();
 
   // Initial loads
   useEffect(() => { listSectors().then(setSectors).catch(() => setSectors([])); }, []);
   useEffect(() => { listPresets().then(setPresets).catch(() => setPresets([])); }, []);
 
-  // Refetch stocks whenever filters or sort change.
-  useEffect(() => {
+  const refetch = useCallback(async () => {
     setLoading(true);
     setError(null);
     const params = Object.fromEntries(
       Object.entries(filters).filter(([, v]) => v !== '' && v != null),
     );
     Object.assign(params, sort, { limit: 500 });
-    listStocks(params)
-      .then(setStocks)
-      .catch((e) => setError(e?.message || 'Failed to load'))
-      .finally(() => setLoading(false));
+    try {
+      const data = await listStocks(params);
+      setStocks(data);
+      // Also refresh sector list since adding a new ticker may reveal a new sector.
+      listSectors().then(setSectors).catch(() => {});
+    } catch (e) {
+      setError(e?.message || 'Failed to load');
+    } finally {
+      setLoading(false);
+    }
   }, [filters, sort]);
+
+  // Refetch stocks whenever filters or sort change.
+  useEffect(() => { refetch(); }, [refetch]);
 
   // Compute "dirty" against the active preset's saved snapshot.
   const isDirty = useMemo(() => {
@@ -213,12 +224,20 @@ export default function Screener() {
               <MagnifyingGlassIcon className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
               <input
                 type="text"
-                placeholder="Search ticker or name…"
+                placeholder="Filter table — ticker or name…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-9 pr-3 py-1.5 bg-secondary-900 border border-secondary-700 rounded text-sm text-neutral-100 placeholder-neutral-500 focus:border-primary-500 focus:outline-none"
               />
             </div>
+            <AddTickerBox
+              existing={stocks}
+              onPick={(s) => navigate(`/stocks/${s.ticker}`)}
+              onAdded={async (ticker) => {
+                await refetch();
+                setExpandedRow(ticker);
+              }}
+            />
             <label className="inline-flex items-center gap-2 text-xs text-neutral-400 px-2">
               <input
                 type="checkbox"

@@ -39,14 +39,17 @@ npm test                                  # react-scripts (Jest); no tests writt
 The screener is empty until you run a refresh. Either:
 ```bash
 # CLI (recommended — schedule via cron for daily EOD refresh)
-python -m backend.app.scripts.refresh_universe                    # default universe
-python -m backend.app.scripts.refresh_universe AAPL MSFT NVDA     # specific tickers
-python -m backend.app.scripts.refresh_universe --file my_list.txt
+python -m backend.app.scripts.refresh_universe                          # default universe (popular)
+python -m backend.app.scripts.refresh_universe -u nasdaq100             # one named universe
+python -m backend.app.scripts.refresh_universe -u popular -u high_short # multiple, deduped
+python -m backend.app.scripts.refresh_universe AAPL MSFT NVDA           # explicit tickers
+python -m backend.app.scripts.refresh_universe --list                   # see available universes
 
-# Or use the UI: navigate to /refresh in the dashboard.
+# Or use the UI: /refresh has a universe picker, or use the inline
+# "Add ticker" search box on the screener toolbar (sync refresh of one).
 ```
 
-The default universe lives in `backend/app/data/sp500.txt` (one ticker per line, `#` comments allowed).
+Universes are plain `.txt` files in `backend/app/data/` (one ticker per line, `#` comments allowed). Special header comments are picked up as metadata: `# label: …` and `# description: …`. Adding a new universe = drop a new file in that dir; it'll be discovered automatically by `services/universes.py` and surfaced via `GET /api/universes`. Built-in universes: `popular`, `mega_cap`, `nasdaq100`, `high_short`, `dividend_aristocrats`.
 
 There is no Python test suite or linter configured.
 
@@ -83,9 +86,11 @@ The screener never calls yfinance directly — routes only read the DB. Refresh 
   - `BasketItem`: one ticker in the user's working set. Unique on `(user_id, stock_id)` so adds are idempotent.
 - `services/stock_data.py` — yfinance ingest. `_get`/`_to_float` defensively pull sparse yfinance fields. `refresh_ticker` upserts metadata + appends a snapshot + upserts 2y of daily bars. `upsert_universe` is the batch loop with rate-limit sleeps.
 - `services/screener.py` — the join that powers the screener. `_latest_snapshot_subquery` produces per-stock `max(as_of)`; `list_stocks` aliases `StockSnapshot` and applies whitelisted filters/sorts. **The `_SORT_FIELDS` dict is the only source of truth for what the screener can sort by — extend there to expose new columns.**
+- `services/universes.py` — discovers `*.txt` files in `backend/app/data/` and parses `# label:` / `# description:` headers. `resolve_tickers(universes, tickers)` combines + dedupes inputs.
 - `api/routes/stocks.py` — `/api/stocks` (screener), `/api/stocks/{ticker}` (detail with latest snapshot), `/api/stocks/{ticker}/bars`.
 - `api/routes/sectors.py` — sector aggregates (count, avg day change, total market cap).
-- `api/routes/refresh.py` — `/api/refresh` (background task) and `/api/refresh/sync` (blocking; small lists only).
+- `api/routes/universes.py` — `GET /api/universes` lists discovered universes with counts/labels.
+- `api/routes/refresh.py` — `POST /api/refresh` accepts `{tickers, universes}` (either or both); `/api/refresh/sync` is the blocking variant used by the inline "Add ticker" UX.
 - `api/routes/presets.py` — `/api/screener-presets` CRUD. Names are unique per user (409 on duplicate).
 - `api/routes/basket.py` — `/api/basket` list / add (idempotent) / bulk add / remove / clear.
 - `scripts/refresh_universe.py` — CLI entrypoint, suitable for cron.
@@ -103,11 +108,11 @@ The screener never calls yfinance directly — routes only read the DB. Refresh 
 - `components/ui/` — shadcn-style primitives (lowercase `.jsx`). Only what's actually imported is kept.
 - `pages/`:
   - `Dashboard.js` — overview stats, top gainers/losers/short cards (with basket buttons), sector table.
-  - `Screener.js` — centerpiece. Two-column layout: filter rail (left) + preset bar + table (right). Sector groups are collapsible, individual rows expand inline to show extra metrics. State: `filters`, `sort`, `activePresetId`, `savedSnapshot` — `isDirty` is computed by stable-stringifying current vs. saved.
+  - `Screener.js` — centerpiece. Two-column layout: filter rail (left) + preset bar + table (right). Sector groups are collapsible, individual rows expand inline to show extra metrics. Toolbar has both a table-filter search and an `<AddTickerBox>` (autocompletes from the loaded screener; if you type a ticker it doesn't have, an "+ Add" affordance does a sync refresh on it). State: `filters`, `sort`, `activePresetId`, `savedSnapshot` — `isDirty` is computed by stable-stringifying current vs. saved.
   - `Basket.js` — the working set. Summary stats, paste-tickers add bar, table with remove buttons, placeholder for the phase-4 backtest builder.
   - `StockDetail.js` — TradingView chart + collapsible Valuation / Short interest / Growth / Volume sections + recharts close history.
   - `Sectors.js` — collapsible per-sector cards.
-  - `Refresh.js` — `POST /api/refresh` (async + sync) UI.
+  - `Refresh.js` — universe picker (multi-select with counts) + free-text ticker box. Calls `POST /api/refresh` (async or sync) with `{tickers, universes}`.
 
 ## Conventions and gotchas
 

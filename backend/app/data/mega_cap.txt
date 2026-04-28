@@ -1,0 +1,63 @@
+# label: Mega cap
+# description: Top US-listed companies by market cap (>$200B). Slow-changing list.
+
+# Big tech
+AAPL
+MSFT
+GOOGL
+GOOG
+AMZN
+META
+NVDA
+TSLA
+
+# Berkshire / Visa / Mastercard
+BRK-B
+V
+MA
+
+# Health
+LLY
+JNJ
+UNH
+NVO
+ABBV
+
+# Consumer
+WMT
+COST
+HD
+PG
+KO
+PEP
+
+# Energy
+XOM
+CVX
+
+# Financials
+JPM
+BAC
+WFC
+
+# Industrial / misc
+BA
+CAT
+
+# Semis
+AVGO
+TSM
+ASML
+
+# Comms
+NFLX
+T
+VZ
+
+# Others
+ORCL
+ADBE
+CRM
+TMO
+ABT
+DHR

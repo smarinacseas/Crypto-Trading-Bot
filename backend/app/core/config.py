@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     AUTH_ENABLED: bool = False
     SECRET_KEY: str = "dev-only-change-when-enabling-auth"
 
-    DEFAULT_UNIVERSE_FILE: str = "backend/app/data/sp500.txt"
+    DEFAULT_UNIVERSE_FILE: str = "backend/app/data/popular.txt"
     REFRESH_BATCH_SIZE: int = 25
     REFRESH_RATE_LIMIT_SECONDS: float = 0.5
 

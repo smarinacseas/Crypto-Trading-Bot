@@ -1,0 +1,33 @@
+# label: High short interest
+# description: Frequently shorted / meme-watchlist names. Good for surfacing squeeze candidates.
+
+GME
+AMC
+BBBY
+KOSS
+EXPR
+WKHS
+MULN
+BYND
+CVNA
+UPST
+W
+PTON
+AFRM
+NKLA
+SOFI
+HOOD
+COIN
+RIVN
+LCID
+LULU
+RUM
+RDFN
+OPEN
+BB
+CLOV
+BKKT
+MARA
+RIOT
+HUT
+BTBT

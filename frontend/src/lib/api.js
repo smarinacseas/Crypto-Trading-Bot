@@ -15,11 +15,14 @@ export const getStockBars = (ticker, limit = 252) =>
 // Sectors
 export const listSectors = () => api.get('/sectors').then(r => r.data);
 
-// Refresh
-export const refreshUniverse = (tickers = null) =>
-  api.post('/refresh', { tickers }).then(r => r.data);
-export const refreshUniverseSync = (tickers) =>
-  api.post('/refresh/sync', { tickers }).then(r => r.data);
+// Universes
+export const listUniverses = () => api.get('/universes').then(r => r.data);
+
+// Refresh — accepts {tickers, universes} (either or both).
+export const refreshUniverse = (body = {}) =>
+  api.post('/refresh', body).then(r => r.data);
+export const refreshUniverseSync = (body) =>
+  api.post('/refresh/sync', body).then(r => r.data);
 
 // Screener presets
 export const listPresets = () => api.get('/screener-presets').then(r => r.data);
